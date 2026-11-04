@@ -72,7 +72,8 @@
                     </Grid>
 
                     <Border Grid.Row="1" Background="#0C0D10" CornerRadius="4" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
-                        <DataGrid ItemsSource="{Binding CommandsView}" SelectedItem="{Binding SelectedCommand}" AutoGenerateColumns="False"
+                        <DataGrid ItemsSource="{Binding CommandsView}" SelectedItem="{Binding SelectedCommand, Mode=TwoWay}"
+                                  IsSynchronizedWithCurrentItem="True" AutoGenerateColumns="False"
                                   CanUserAddRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                                   Background="Transparent" RowBackground="Transparent" AlternatingRowBackground="#0AFFFFFF"
                                   Foreground="{StaticResource TextPrimaryBrush}" HorizontalGridLinesBrush="#1F232B"

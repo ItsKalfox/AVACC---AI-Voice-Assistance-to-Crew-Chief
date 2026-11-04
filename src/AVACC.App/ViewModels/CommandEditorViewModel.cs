@@ -57,7 +57,7 @@ public class CommandEditorViewModel : ObservableObject
             if (SetProperty(ref _selectedCommand, value))
             {
                 DeleteCommand?.RaiseCanExecuteChanged();
-                if (value != null && !_isEditing)
+                if (value != null)
                 {
                     PopulateEditFields(value);
                 }
@@ -219,7 +219,10 @@ public class CommandEditorViewModel : ObservableObject
 
     private void StartNewCommand()
     {
-        SelectedCommand = null;
+        _selectedCommand = null;
+        OnPropertyChanged(nameof(SelectedCommand));
+        DeleteCommand?.RaiseCanExecuteChanged();
+
         EditName = "New Command";
         EditCommandId = "CREW_CHIEF_ID";
         EditCategory = "General";

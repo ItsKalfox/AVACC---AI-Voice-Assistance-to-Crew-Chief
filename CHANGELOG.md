@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Connected collection change listener to automatically scroll the live diagnostic event log to the latest entry as messages arrive.
 
 ### Fixed
+- **Command Selection Binding in Command Editor:**
+  - Removed internal `!_isEditing` guard from `SelectedCommand` property setter that was permanently blocking `PopulateEditFields` from updating form fields when selecting rows in the command registry table.
+  - Added explicit two-way binding (`Mode=TwoWay`) and `IsSynchronizedWithCurrentItem="True"` on the Command Registry `DataGrid`.
 - **Dark Theme Styling for History Table:**
   - Added implicit dark theme styles for `GridViewColumnHeader` and `ListViewItem` in `App.xaml` to eliminate white header backgrounds and white-on-white text in the Recent Voice Command History table.
 - **Delete Button State Reactivity:**
