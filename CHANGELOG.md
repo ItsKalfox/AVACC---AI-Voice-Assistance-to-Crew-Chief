@@ -8,13 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Future features, Crew Chief integrations, and enhancements will be logged here.
+- **CSV Command Bulk Import with Interactive Staging Table:**
+  - Added "Import CSV" button in the Command Editor toolbar to load batch commands from standard `.csv` files.
+  - Implemented an interactive preview & staging modal overlay where users can edit rows, modify friendly names, command IDs, categories, descriptions, natural language examples, and aliases before confirming the bulk import.
+  - Added "CSV Template" export feature generating `AVACC_Commands_Template.csv` pre-populated with standard schema and example sim racing commands.
+- **Command Deletion Confirmation:**
+  - Added a confirmation modal warning dialog before deleting commands from the registry to prevent accidental deletions.
+- **Voice Command History Clear Action:**
+  - Added a "Clear History" button with confirmation prompt to the Recent Voice Command History card in Visual CMD.
+- **Structured JSON Response Viewer:**
+  - Raw AI response JSON is captured, formatted with indentation, and displayed in an expanded-by-default viewer in Visual CMD.
 
 ### Changed
-- None yet.
+- **Auto-Scrolling Diagnostic Live Log:**
+  - Connected collection change listener to automatically scroll the live diagnostic event log to the latest entry as messages arrive.
 
 ### Fixed
-- None yet.
+- **Dark Theme Styling for History Table:**
+  - Added implicit dark theme styles for `GridViewColumnHeader` and `ListViewItem` in `App.xaml` to eliminate white header backgrounds and white-on-white text in the Recent Voice Command History table.
+- **Delete Button State Reactivity:**
+  - Fixed `DeleteCommand.RaiseCanExecuteChanged()` triggering when selection changes in the Command Registry.
 
 ---
 
@@ -47,3 +60,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed UI contrast issues with dropdown popups (`ComboBox`) and scrollbars (`ScrollBar`) in dark mode.
 - Fixed tab navigation `InvalidCastException` and view visibility bindings.
 - Fixed Manual Command Intent Tester button disabled state by adding reactive `CanExecuteChanged` notifications.
+

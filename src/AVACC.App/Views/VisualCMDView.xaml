@@ -165,9 +165,10 @@
                         <TextBlock Text="{Binding LlmReason, StringFormat='Reason: {0}'}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
 
                         <!-- Raw Structured JSON Expander -->
-                        <Expander Header="View Structured JSON Response" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
-                            <TextBox Text="{Binding RawJsonResponse, FallbackValue='{}'}" IsReadOnly="True" Style="{StaticResource CodeBoxStyle}"
-                                     Height="90" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0" />
+                        <Expander Header="View Structured JSON Response" IsExpanded="True" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                            <TextBox Text="{Binding RawJsonResponse, TargetNullValue='(No JSON response received yet. Trigger PTT or manual test to inspect.)', FallbackValue='(No JSON response received yet. Trigger PTT or manual test to inspect.)'}" 
+                                     IsReadOnly="True" Style="{StaticResource CodeBoxStyle}"
+                                     Height="110" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0" />
                         </Expander>
                     </StackPanel>
                 </Border>
@@ -206,7 +207,7 @@
 
                     <!-- Log List -->
                     <Border Grid.Row="1" Background="#0C0D10" CornerRadius="4" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
-                        <ListBox ItemsSource="{Binding EventLogs}" Background="Transparent" BorderThickness="0"
+                        <ListBox x:Name="EventLogListBox" ItemsSource="{Binding EventLogs}" Background="Transparent" BorderThickness="0"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -236,7 +237,14 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="RECENT VOICE COMMAND HISTORY" Style="{StaticResource CardHeaderStyle}" Margin="0,0,0,8" />
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="RECENT VOICE COMMAND HISTORY" Style="{StaticResource CardHeaderStyle}" Margin="0" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Content="Clear History" Command="{Binding ClearHistoryCommand}" Style="{StaticResource ModernButtonStyle}" Padding="10,4" />
+                    </Grid>
 
                     <Border Grid.Row="1" Background="#0C0D10" CornerRadius="4" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
                         <ListView ItemsSource="{Binding HistoryItems}" SelectedItem="{Binding SelectedHistoryItem}"

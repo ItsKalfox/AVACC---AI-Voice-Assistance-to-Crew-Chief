@@ -86,8 +86,18 @@ public static class PromptBuilder
             }
 
             cleanedJson = cleanedJson.Trim();
+            result.RawJsonResponse = cleanedJson;
 
             using var doc = JsonDocument.Parse(cleanedJson);
+            try
+            {
+                result.RawJsonResponse = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch
+            {
+                // keep cleanedJson
+            }
+
             var root = doc.RootElement;
 
             if (root.TryGetProperty("transcript", out var trEl) && trEl.ValueKind == JsonValueKind.String)

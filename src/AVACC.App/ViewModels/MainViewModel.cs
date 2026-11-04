@@ -260,6 +260,7 @@ public class MainViewModel : ObservableObject
             Application.Current?.Dispatcher?.Invoke(() =>
             {
                 VisualCMD.AudioStatus = "Idle";
+                VisualCMD.RawJsonResponse = result.RawJsonResponse ?? (!string.IsNullOrEmpty(result.Error) ? $"{{\"error\": \"{result.Error}\"}}" : null);
 
                 if (!string.IsNullOrEmpty(result.Error))
                 {
@@ -301,7 +302,8 @@ public class MainViewModel : ObservableObject
                         Reason = result.Reason,
                         Provider = result.Provider ?? settings.SimpleProvider,
                         DurationMs = result.DurationMs,
-                        Status = result.IsSuccess ? "Success" : "Unmatched"
+                        Status = result.IsSuccess ? "Success" : "Unmatched",
+                        RawJsonResponse = result.RawJsonResponse
                     });
                 }
             });

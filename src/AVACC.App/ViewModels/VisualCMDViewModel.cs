@@ -196,6 +196,7 @@ public class VisualCMDViewModel : ObservableObject
     public RelayCommand ClearLogsCommand { get; }
     public RelayCommand CopyLogsCommand { get; }
     public AsyncRelayCommand ExportLogsCommand { get; }
+    public RelayCommand ClearHistoryCommand { get; }
     public RelayCommand TriggerPttDownCommand { get; }
     public RelayCommand TriggerPttUpCommand { get; }
 
@@ -211,11 +212,30 @@ public class VisualCMDViewModel : ObservableObject
         TriggerPttDownCommand = new RelayCommand(() => _pttService.TriggerPttDown());
         TriggerPttUpCommand = new RelayCommand(() => _pttService.TriggerPttUp());
         ClearLogsCommand = new RelayCommand(() => _eventLogService.Clear());
+        ClearHistoryCommand = new RelayCommand(ClearHistoryWithConfirmation);
         CopyLogsCommand = new RelayCommand(CopyLogsToClipboard);
         ExportLogsCommand = new AsyncRelayCommand(ExportLogsToFileAsync);
 
         _eventLogService.LogInfo("AVACC Subsystem initialized. Ready for PTT capture.");
         _eventLogService.LogInfo("Note: Version 0.1 generates and displays command suggestions only (Crew Chief IPC inactive).");
+    }
+
+    private void ClearHistoryWithConfirmation()
+    {
+        if (HistoryItems.Count == 0) return;
+
+        var confirm = System.Windows.MessageBox.Show(
+            "Are you sure you want to clear all recent voice command history entries?",
+            "Clear Command History",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question);
+
+        if (confirm == System.Windows.MessageBoxResult.Yes)
+        {
+            HistoryItems.Clear();
+            SelectedHistoryItem = null;
+            _eventLogService.LogInfo("Voice command history cleared.");
+        }
     }
 
     private void CopyLogsToClipboard()

@@ -19,7 +19,7 @@ public class SettingsAndRegistryTests
 
             Assert.NotNull(loaded);
             Assert.Equal("Google Gemini", loaded.SimpleProvider);
-            Assert.Equal("gemini-2.5-flash", loaded.SimpleModel);
+            Assert.Equal("gemini-1.5-flash", loaded.SimpleModel);
             Assert.Equal("RightCtrl", loaded.PttKey);
             Assert.True(loaded.IsGlobalPttEnabled);
 

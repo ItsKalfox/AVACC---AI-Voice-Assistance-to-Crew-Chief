@@ -1,6 +1,9 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Text;
+using System.Windows;
 using System.Windows.Data;
+using Microsoft.Win32;
 using AVACC.AI;
 using AVACC.Core.Commands;
 using AVACC.Core.Configuration;
@@ -53,6 +56,7 @@ public class CommandEditorViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedCommand, value))
             {
+                DeleteCommand?.RaiseCanExecuteChanged();
                 if (value != null && !_isEditing)
                 {
                     PopulateEditFields(value);
@@ -113,6 +117,15 @@ public class CommandEditorViewModel : ObservableObject
     public string TestResultReason { get => _testResultReason; set => SetProperty(ref _testResultReason, value); }
     public bool IsTesting { get => _isTesting; set => SetProperty(ref _isTesting, value); }
 
+    private bool _isImportingCsv;
+    public bool IsImportingCsv
+    {
+        get => _isImportingCsv;
+        set => SetProperty(ref _isImportingCsv, value);
+    }
+
+    public ObservableCollection<StagedCommandModel> StagedImportCommands { get; } = new();
+
     // Commands
     public RelayCommand AddNewCommand { get; }
     public AsyncRelayCommand SaveCommand { get; }
@@ -120,6 +133,10 @@ public class CommandEditorViewModel : ObservableObject
     public AsyncRelayCommand DeleteCommand { get; }
     public AsyncRelayCommand ResetToDefaults { get; }
     public AsyncRelayCommand RunManualTest { get; }
+    public RelayCommand ImportCsvCommand { get; }
+    public RelayCommand ExportCsvTemplateCommand { get; }
+    public AsyncRelayCommand ConfirmImportCommand { get; }
+    public RelayCommand CancelImportCommand { get; }
 
     public CommandEditorViewModel(
         ICommandRegistryService registryService,
@@ -141,6 +158,14 @@ public class CommandEditorViewModel : ObservableObject
         DeleteCommand = new AsyncRelayCommand(DeleteCurrentCommandAsync, () => SelectedCommand != null);
         ResetToDefaults = new AsyncRelayCommand(ResetDefaultsAsync);
         RunManualTest = new AsyncRelayCommand(RunManualIntentTestAsync, () => !string.IsNullOrWhiteSpace(TestInputSentence));
+        ImportCsvCommand = new RelayCommand(OpenAndParseCsv);
+        ExportCsvTemplateCommand = new RelayCommand(ExportCsvTemplate);
+        ConfirmImportCommand = new AsyncRelayCommand(ConfirmImportAsync);
+        CancelImportCommand = new RelayCommand(() =>
+        {
+            StagedImportCommands.Clear();
+            IsImportingCsv = false;
+        });
 
         _registryService.CommandsChanged += (s, e) => LoadCommands();
         LoadCommands();
@@ -265,10 +290,224 @@ public class CommandEditorViewModel : ObservableObject
     {
         if (SelectedCommand == null) return;
 
-        var id = SelectedCommand.CrewChiefCommandId;
+        var cmdName = SelectedCommand.Name;
+        var cmdId = SelectedCommand.CrewChiefCommandId;
+
+        var confirm = MessageBox.Show(
+            $"Are you sure you want to delete command '{cmdName}' ({cmdId})?",
+            "Confirm Delete Command",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirm != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
         await _registryService.DeleteCommandAsync(SelectedCommand.Id);
-        _eventLogService.LogInfo($"Deleted command: {id}");
+        _eventLogService.LogInfo($"Deleted command: {cmdId}");
         LoadCommands();
+        if (_commands.Count > 0)
+        {
+            SelectedCommand = _commands[0];
+        }
+        else
+        {
+            SelectedCommand = null;
+        }
+        DeleteCommand.RaiseCanExecuteChanged();
+    }
+
+    private void OpenAndParseCsv()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+            Title = "Import Commands from CSV"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            try
+            {
+                var lines = System.IO.File.ReadAllLines(dialog.FileName);
+                if (lines.Length == 0)
+                {
+                    MessageBox.Show("Selected CSV file is empty.", "Import CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                StagedImportCommands.Clear();
+                int startIndex = 0;
+                var firstLineCols = ParseCsvLine(lines[0]);
+
+                bool hasHeader = firstLineCols.Any(c => 
+                    c.Equals("Name", StringComparison.OrdinalIgnoreCase) ||
+                    c.Equals("CommandId", StringComparison.OrdinalIgnoreCase) ||
+                    c.Equals("CrewChiefCommandId", StringComparison.OrdinalIgnoreCase) ||
+                    c.Equals("Category", StringComparison.OrdinalIgnoreCase));
+
+                if (hasHeader)
+                {
+                    startIndex = 1;
+                }
+
+                for (int i = startIndex; i < lines.Length; i++)
+                {
+                    var line = lines[i];
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    var cols = ParseCsvLine(line);
+                    if (cols.Count == 0) continue;
+
+                    var staged = new StagedCommandModel
+                    {
+                        IsSelected = true,
+                        Name = cols.Count > 0 ? cols[0] : "",
+                        CrewChiefCommandId = cols.Count > 1 ? cols[1].Trim().ToUpperInvariant() : "",
+                        Category = cols.Count > 2 && !string.IsNullOrWhiteSpace(cols[2]) ? cols[2].Trim() : "General",
+                        Description = cols.Count > 3 ? cols[3] : "",
+                        ExamplesRaw = cols.Count > 4 ? cols[4] : "",
+                        AliasesRaw = cols.Count > 5 ? cols[5] : "",
+                        IsEnabled = cols.Count <= 6 || !bool.TryParse(cols[6], out var active) || active
+                    };
+
+                    if (!string.IsNullOrWhiteSpace(staged.CrewChiefCommandId) || !string.IsNullOrWhiteSpace(staged.Name))
+                    {
+                        StagedImportCommands.Add(staged);
+                    }
+                }
+
+                if (StagedImportCommands.Count == 0)
+                {
+                    MessageBox.Show("No valid command rows could be parsed from the CSV file.", "Import CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                IsImportingCsv = true;
+                _eventLogService.LogInfo($"Loaded {StagedImportCommands.Count} commands from CSV into staging preview.");
+            }
+            catch (Exception ex)
+            {
+                _eventLogService.LogError($"Failed to read CSV: {ex.Message}");
+                MessageBox.Show($"Failed to read CSV file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private void ExportCsvTemplate()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Filter = "CSV Files (*.csv)|*.csv",
+            DefaultExt = "csv",
+            FileName = "AVACC_Commands_Template.csv",
+            Title = "Save Commands CSV Template"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            try
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("Name,CrewChiefCommandId,Category,Description,Examples,Aliases,IsEnabled");
+                sb.AppendLine("\"Pit Stop Confirmation\",\"BOX_THIS_LAP\",\"Pitstop\",\"Inform crew chief you are pitting on the current lap\",\"box this lap;coming into pits;pitting now\",\"box box;pit now\",True");
+                sb.AppendLine("\"Fuel Remaining Check\",\"HOW_MUCH_FUEL_REMAINING\",\"Fuel\",\"Ask crew chief for remaining fuel\",\"how much fuel do I have;fuel remaining;fuel check\",\"fuel status\",True");
+                sb.AppendLine("\"Brake Temperature Check\",\"HOW_ARE_MY_BRAKES\",\"Brakes\",\"Check brake temperatures and wear\",\"how are the brakes;brake temp check;check brakes\",\"brake status\",True");
+
+                System.IO.File.WriteAllText(dialog.FileName, sb.ToString(), Encoding.UTF8);
+                _eventLogService.LogInfo($"CSV template saved to {dialog.FileName}");
+                MessageBox.Show("CSV template created successfully. You can edit it and import your commands anytime.", "Template Exported", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _eventLogService.LogError($"Failed to export template: {ex.Message}");
+                MessageBox.Show($"Failed to export template: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private async Task ConfirmImportAsync()
+    {
+        var toImport = StagedImportCommands.Where(s => s.IsSelected && !string.IsNullOrWhiteSpace(s.CrewChiefCommandId)).ToList();
+        if (toImport.Count == 0)
+        {
+            MessageBox.Show("No commands selected for import.", "Import CSV", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        int count = 0;
+        foreach (var item in toImport)
+        {
+            var examples = item.ExamplesRaw
+                .Split(new[] { ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(e => e.Trim())
+                .Where(e => !string.IsNullOrEmpty(e))
+                .ToList();
+
+            var aliases = item.AliasesRaw
+                .Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(a => a.Trim())
+                .Where(a => !string.IsNullOrEmpty(a))
+                .ToList();
+
+            var cmd = new CommandDefinition
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Name = string.IsNullOrWhiteSpace(item.Name) ? item.CrewChiefCommandId : item.Name.Trim(),
+                CrewChiefCommandId = item.CrewChiefCommandId.Trim().ToUpperInvariant(),
+                Category = string.IsNullOrWhiteSpace(item.Category) ? "General" : item.Category.Trim(),
+                Description = item.Description.Trim(),
+                Examples = examples,
+                Aliases = aliases,
+                IsEnabled = item.IsEnabled
+            };
+
+            await _registryService.AddCommandAsync(cmd);
+            count++;
+        }
+
+        StagedImportCommands.Clear();
+        IsImportingCsv = false;
+        LoadCommands();
+        _eventLogService.LogInfo($"Successfully bulk-imported {count} commands from CSV.");
+        MessageBox.Show($"Successfully imported {count} commands into the registry.", "Import Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private static List<string> ParseCsvLine(string line)
+    {
+        var result = new List<string>();
+        if (line == null) return result;
+
+        var sb = new StringBuilder();
+        bool inQuotes = false;
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            if (c == '\"')
+            {
+                if (inQuotes && i + 1 < line.Length && line[i + 1] == '\"')
+                {
+                    sb.Append('\"');
+                    i++;
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                }
+            }
+            else if (c == ',' && !inQuotes)
+            {
+                result.Add(sb.ToString().Trim());
+                sb.Clear();
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+        result.Add(sb.ToString().Trim());
+        return result;
     }
 
     private async Task ResetDefaultsAsync()

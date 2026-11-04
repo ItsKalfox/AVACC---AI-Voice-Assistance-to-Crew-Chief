@@ -38,6 +38,8 @@
 
                 <!-- Toolbar Actions -->
                 <StackPanel Grid.Column="3" Orientation="Horizontal">
+                    <Button Content="Import CSV" Command="{Binding ImportCsvCommand}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,6,0" />
+                    <Button Content="CSV Template" Command="{Binding ExportCsvTemplateCommand}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,6,0" />
                     <Button Content="+ New Command" Command="{Binding AddNewCommand}" Style="{StaticResource AccentButtonStyle}" Margin="0,0,6,0" />
                     <Button Content="Reset Defaults" Command="{Binding ResetToDefaults}" Style="{StaticResource ModernButtonStyle}" />
                 </StackPanel>
@@ -210,6 +212,74 @@
                     </Grid>
                 </Border>
             </Grid>
+        </Grid>
+
+        <!-- CSV IMPORT PREVIEW & EDIT MODAL OVERLAY -->
+        <Grid Grid.Row="0" Grid.RowSpan="2" Background="#E008090C"
+              Visibility="{Binding IsImportingCsv, Converter={StaticResource BooleanToVisibilityConverter}}"
+              Panel.ZIndex="100">
+            <Border Width="960" Height="580" Style="{StaticResource CardStyle}" 
+                    Background="#16181D" BorderBrush="{StaticResource AccentCyanBrush}" BorderThickness="1"
+                    Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="IMPORT COMMANDS FROM CSV — PREVIEW &amp; EDIT" Style="{StaticResource CardHeaderStyle}" Margin="0" />
+                        <TextBlock Grid.Column="1" Text="{Binding StagedImportCommands.Count, StringFormat='{}{0} commands loaded'}" 
+                                   FontSize="11" Foreground="{StaticResource AccentCyanBrush}" FontWeight="SemiBold" />
+                    </Grid>
+
+                    <TextBlock Grid.Row="1" Text="Review and edit the parsed commands before adding them to your registry. You can edit cells directly or deselect commands you do not want to import."
+                               FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,10" TextWrapping="Wrap" />
+
+                    <!-- Staging DataGrid -->
+                    <Border Grid.Row="2" Background="#0C0D10" CornerRadius="4" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" Margin="0,0,0,12">
+                        <DataGrid ItemsSource="{Binding StagedImportCommands}" AutoGenerateColumns="False"
+                                  CanUserAddRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="Transparent" RowBackground="Transparent" AlternatingRowBackground="#0AFFFFFF"
+                                  Foreground="{StaticResource TextPrimaryBrush}" HorizontalGridLinesBrush="#1F232B"
+                                  BorderThickness="0" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridCheckBoxColumn Header="Import" Binding="{Binding IsSelected}" Width="55" />
+                                <DataGridTextColumn Header="Friendly Name" Binding="{Binding Name}" Width="150" FontWeight="SemiBold" />
+                                <DataGridTextColumn Header="Crew Chief Command ID" Binding="{Binding CrewChiefCommandId}" Width="190" FontFamily="Cascadia Code, Consolas" />
+                                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="85" />
+                                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="180" />
+                                <DataGridTextColumn Header="Examples (semicolon-separated)" Binding="{Binding ExamplesRaw}" Width="180" />
+                                <DataGridTextColumn Header="Aliases (comma-separated)" Binding="{Binding AliasesRaw}" Width="120" />
+                                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsEnabled}" Width="50" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <!-- Actions -->
+                    <Grid Grid.Row="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="Tip: Examples should be common natural language phrases driver might say." 
+                                   FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Cancel" Command="{Binding CancelImportCommand}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,8,0" Padding="14,6" />
+                            <Button Content="Confirm &amp; Import All" Command="{Binding ConfirmImportCommand}" Style="{StaticResource AccentButtonStyle}" Padding="16,6" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

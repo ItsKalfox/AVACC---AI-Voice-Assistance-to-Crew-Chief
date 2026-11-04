@@ -20,6 +20,8 @@ public class VoiceCommandResult
 
     public string? ModelName { get; set; }
 
+    public string? RawJsonResponse { get; set; }
+
     public long DurationMs { get; set; }
 
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
