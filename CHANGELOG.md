@@ -1,0 +1,49 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Future features, Crew Chief integrations, and enhancements will be logged here.
+
+### Changed
+- None yet.
+
+### Fixed
+- None yet.
+
+---
+
+## [0.0.1-beta] - 2026-11-04
+
+### Added
+- **Core Architecture & Modular Solution:**
+  - `AVACC.Core`: Domain models, command definitions, configuration abstractions, and interfaces.
+  - `AVACC.Infrastructure`: DPAPI-encrypted credential storage (never storing plaintext keys), JSON settings persistence, event logging service, and default ACC Crew Chief command registry.
+  - `AVACC.Audio`: WASAPI low-level audio capture with automatic endpoint resolution (Multimedia, Communications, Console) and peak-level metering.
+  - `AVACC.AI`: Comprehensive multi-provider AI subsystem supporting Google Gemini, Groq, and OpenAI with dynamic online model discovery.
+  - `AVACC.App`: Modern dark-cockpit themed WPF desktop application built on MVVM architecture with Microsoft Dependency Injection.
+- **Dynamic Provider Factory (`IAIProviderFactory`):**
+  - Seamless runtime switching between Google Gemini, Groq, and OpenAI based on active user settings.
+  - Groq dual-stage chaining: Whisper audio transcription + LLaMA natural-language command interpretation in sub-second response times.
+  - Dynamic model discovery pulling available models directly from provider endpoints (`/v1beta/models`, `/v1/models`).
+- **Interactive Monitoring & Diagnostic Tools:**
+  - Real-time Push-to-Talk (PTT) monitoring with global low-level keyboard hook (`WH_KEYBOARD_LL`) supporting Right Ctrl, Left Ctrl, Space, Alt, and function keys.
+  - Interactive "🎙 Hold to Speak (PTT Test Button)" directly in Visual CMD for quick mouse-driven microphone testing.
+  - Live audio level meter reacting to 32-bit IEEE float & 16-bit PCM WASAPI audio streams.
+  - Manual Command Intent Tester in Command Editor tab for fast, typed intent verification against configured models.
+  - Live chronological diagnostic event log with export-to-desktop and clipboard copy support.
+- **Unit Testing Suite:**
+  - 27 unit tests covering Core commands, AI prompt parsing, anti-hallucination validation, Audio enumeration/hook lifecycle, and AI provider routing.
+
+### Fixed
+- Fixed Win32 low-level keyboard hook to properly detect Right Ctrl (`VK_CONTROL` with `LLKHF_EXTENDED` flag).
+- Fixed 404 error when calling Google Gemini by updating default model to `gemini-1.5-flash` and adding `CleanModelName` normalization.
+- Fixed Groq selection routing that previously routed Groq model names to Gemini endpoints.
+- Fixed UI contrast issues with dropdown popups (`ComboBox`) and scrollbars (`ScrollBar`) in dark mode.
+- Fixed tab navigation `InvalidCastException` and view visibility bindings.
+- Fixed Manual Command Intent Tester button disabled state by adding reactive `CanExecuteChanged` notifications.
