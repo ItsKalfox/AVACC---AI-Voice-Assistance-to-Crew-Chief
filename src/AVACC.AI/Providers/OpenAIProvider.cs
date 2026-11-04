@@ -13,14 +13,16 @@ public class OpenAIProvider : IMultimodalVoiceProvider, ISpeechToTextProvider, I
     private readonly ISecureKeyStorage _keyStorage;
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenAIProvider>? _logger;
+    private readonly ISettingsService? _settingsService;
 
     public string ProviderName => "OpenAI";
 
-    public OpenAIProvider(ISecureKeyStorage keyStorage, HttpClient? httpClient = null, ILogger<OpenAIProvider>? logger = null)
+    public OpenAIProvider(ISecureKeyStorage keyStorage, HttpClient? httpClient = null, ILogger<OpenAIProvider>? logger = null, ISettingsService? settingsService = null)
     {
         _keyStorage = keyStorage;
         _httpClient = httpClient ?? new HttpClient();
         _logger = logger;
+        _settingsService = settingsService;
     }
 
     public async Task<VoiceCommandResult> ProcessAudioAsync(
@@ -147,7 +149,8 @@ public class OpenAIProvider : IMultimodalVoiceProvider, ISpeechToTextProvider, I
 
         try
         {
-            var systemPrompt = PromptBuilder.BuildSystemPrompt(availableCommands);
+            var optimizePayload = _settingsService?.CurrentSettings?.OptimizePromptPayload ?? true;
+            var systemPrompt = PromptBuilder.BuildSystemPrompt(availableCommands, optimizePayload);
             var userPrompt = PromptBuilder.BuildUserPrompt(transcript);
 
             var requestBody = new

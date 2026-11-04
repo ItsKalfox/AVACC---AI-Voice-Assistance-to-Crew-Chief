@@ -129,6 +129,15 @@
                                 </StackPanel>
                             </Grid>
                         </StackPanel>
+
+                        <Separator Background="{StaticResource CardBorderBrush}" Margin="0,12,0,10" />
+
+                        <!-- Prompt Optimization Option -->
+                        <CheckBox Content="Optimize prompt payload (Compact lookup table)" 
+                                  IsChecked="{Binding OptimizePromptPayload}" 
+                                  Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                        <TextBlock Text="Reduces token payload by ~90% by sending compact command descriptions instead of bulky examples. Prevents token limit errors (TPM / 413) on Groq and free-tier models." 
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="20,0,0,0" />
                     </StackPanel>
                 </Border>
             </StackPanel>

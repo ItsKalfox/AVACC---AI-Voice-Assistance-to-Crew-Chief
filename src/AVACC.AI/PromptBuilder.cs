@@ -6,7 +6,7 @@ namespace AVACC.AI;
 
 public static class PromptBuilder
 {
-    public static string BuildSystemPrompt(IReadOnlyList<CommandDefinition> availableCommands)
+    public static string BuildSystemPrompt(IReadOnlyList<CommandDefinition> availableCommands, bool optimizePayload = false)
     {
         var sb = new StringBuilder();
         sb.AppendLine("You are AVACC, an AI voice assistant for Crew Chief in sim-racing (Assetto Corsa Competizione).");
@@ -30,19 +30,29 @@ public static class PromptBuilder
         sb.AppendLine();
         sb.AppendLine("AVAILABLE COMMAND REGISTRY:");
 
-        foreach (var cmd in availableCommands.Where(c => c.IsEnabled))
+        if (optimizePayload)
         {
-            sb.AppendLine($"- ID: {cmd.CrewChiefCommandId}");
-            sb.AppendLine($"  Name: {cmd.Name}");
-            sb.AppendLine($"  Category: {cmd.Category}");
-            sb.AppendLine($"  Description: {cmd.Description}");
-            if (cmd.Examples.Count > 0)
+            foreach (var cmd in availableCommands.Where(c => c.IsEnabled))
             {
-                sb.AppendLine($"  Examples: {string.Join(" | ", cmd.Examples)}");
+                sb.AppendLine($"- {cmd.CrewChiefCommandId}: {cmd.Description}");
             }
-            if (cmd.Aliases.Count > 0)
+        }
+        else
+        {
+            foreach (var cmd in availableCommands.Where(c => c.IsEnabled))
             {
-                sb.AppendLine($"  Aliases: {string.Join(", ", cmd.Aliases)}");
+                sb.AppendLine($"- ID: {cmd.CrewChiefCommandId}");
+                sb.AppendLine($"  Name: {cmd.Name}");
+                sb.AppendLine($"  Category: {cmd.Category}");
+                sb.AppendLine($"  Description: {cmd.Description}");
+                if (cmd.Examples.Count > 0)
+                {
+                    sb.AppendLine($"  Examples: {string.Join(" | ", cmd.Examples)}");
+                }
+                if (cmd.Aliases.Count > 0)
+                {
+                    sb.AppendLine($"  Aliases: {string.Join(", ", cmd.Aliases)}");
+                }
             }
         }
 

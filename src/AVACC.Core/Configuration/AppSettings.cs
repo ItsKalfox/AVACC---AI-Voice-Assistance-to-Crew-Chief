@@ -40,6 +40,9 @@ public class AppSettings
     // AI Confidence & Reasoning
     public double MinConfidenceThreshold { get; set; } = 0.50;
 
+    // AI Prompt Optimization
+    public bool OptimizePromptPayload { get; set; } = true;
+
     // Diagnostics & Privacy
     public bool EnableDiagnosticLogging { get; set; } = true;
     public bool SaveAudioRecordingsToDisk { get; set; } = false; // Never retain raw audio by default

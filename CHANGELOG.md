@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added a "Clear History" button with confirmation prompt to the Recent Voice Command History card in Visual CMD.
 - **Structured JSON Response Viewer:**
   - Raw AI response JSON is captured, formatted with indentation, and displayed in an expanded-by-default viewer in Visual CMD.
+- **Prompt Payload Optimization Toggle (Compact Lookup Table):**
+  - Added `OptimizePromptPayload` setting and checkbox in the Settings tab under AI Configuration.
+  - Generates a streamlined `- COMMAND_ID: Description` catalog that reduces prompt size from 15,000+ tokens to ~1,500 tokens (a ~90% reduction), eliminating Groq TPM rate limit errors (413).
 
 ### Changed
 - **Auto-Scrolling Diagnostic Live Log:**

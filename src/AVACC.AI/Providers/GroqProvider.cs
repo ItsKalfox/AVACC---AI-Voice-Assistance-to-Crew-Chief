@@ -13,14 +13,16 @@ public class GroqProvider : IMultimodalVoiceProvider, ISpeechToTextProvider, ICo
     private readonly ISecureKeyStorage _keyStorage;
     private readonly HttpClient _httpClient;
     private readonly ILogger<GroqProvider>? _logger;
+    private readonly ISettingsService? _settingsService;
 
     public string ProviderName => "Groq";
 
-    public GroqProvider(ISecureKeyStorage keyStorage, HttpClient? httpClient = null, ILogger<GroqProvider>? logger = null)
+    public GroqProvider(ISecureKeyStorage keyStorage, HttpClient? httpClient = null, ILogger<GroqProvider>? logger = null, ISettingsService? settingsService = null)
     {
         _keyStorage = keyStorage;
         _httpClient = httpClient ?? new HttpClient();
         _logger = logger;
+        _settingsService = settingsService;
     }
 
     public async Task<VoiceCommandResult> ProcessAudioAsync(
@@ -164,7 +166,8 @@ public class GroqProvider : IMultimodalVoiceProvider, ISpeechToTextProvider, ICo
                 ? "llama-3.3-70b-versatile"
                 : modelName;
 
-            var systemPrompt = PromptBuilder.BuildSystemPrompt(availableCommands);
+            var optimizePayload = _settingsService?.CurrentSettings?.OptimizePromptPayload ?? true;
+            var systemPrompt = PromptBuilder.BuildSystemPrompt(availableCommands, optimizePayload);
             var userPrompt = PromptBuilder.BuildUserPrompt(transcript);
 
             var requestBody = new

@@ -54,6 +54,7 @@ public class SettingsViewModel : ObservableObject
     private int _maxRecordingDuration = 10;
     private bool _voiceActivityDetection;
     private bool _noiseSuppression;
+    private bool _optimizePromptPayload = true;
 
     // Audio settings
     public ObservableCollection<AudioDeviceInfo> AvailableAudioDevices { get; } = new();
@@ -216,6 +217,12 @@ public class SettingsViewModel : ObservableObject
         set => SetProperty(ref _noiseSuppression, value);
     }
 
+    public bool OptimizePromptPayload
+    {
+        get => _optimizePromptPayload;
+        set => SetProperty(ref _optimizePromptPayload, value);
+    }
+
     public AudioDeviceInfo? SelectedAudioDevice
     {
         get => _selectedAudioDevice;
@@ -289,6 +296,7 @@ public class SettingsViewModel : ObservableObject
         MaxRecordingDuration = s.MaxRecordingDurationSeconds;
         VoiceActivityDetection = s.VoiceActivityDetectionEnabled;
         NoiseSuppression = s.NoiseSuppressionEnabled;
+        OptimizePromptPayload = s.OptimizePromptPayload;
 
         SampleRate = s.AudioSampleRate;
         InputBoost = s.InputLevelBoost;
@@ -451,6 +459,7 @@ public class SettingsViewModel : ObservableObject
         s.MaxRecordingDurationSeconds = MaxRecordingDuration;
         s.VoiceActivityDetectionEnabled = VoiceActivityDetection;
         s.NoiseSuppressionEnabled = NoiseSuppression;
+        s.OptimizePromptPayload = OptimizePromptPayload;
 
         if (SelectedAudioDevice != null)
         {

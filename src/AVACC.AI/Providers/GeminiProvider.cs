@@ -13,6 +13,7 @@ public class GeminiProvider : IMultimodalVoiceProvider, ISpeechToTextProvider, I
     private readonly ISecureKeyStorage _keyStorage;
     private readonly HttpClient _httpClient;
     private readonly ILogger<GeminiProvider>? _logger;
+    private readonly ISettingsService? _settingsService;
 
     public string ProviderName => "Google Gemini";
 
@@ -35,11 +36,12 @@ public class GeminiProvider : IMultimodalVoiceProvider, ISpeechToTextProvider, I
         return trimmed;
     }
 
-    public GeminiProvider(ISecureKeyStorage keyStorage, HttpClient? httpClient = null, ILogger<GeminiProvider>? logger = null)
+    public GeminiProvider(ISecureKeyStorage keyStorage, HttpClient? httpClient = null, ILogger<GeminiProvider>? logger = null, ISettingsService? settingsService = null)
     {
         _keyStorage = keyStorage;
         _httpClient = httpClient ?? new HttpClient();
         _logger = logger;
+        _settingsService = settingsService;
     }
 
     public async Task<VoiceCommandResult> ProcessAudioAsync(
@@ -64,7 +66,8 @@ public class GeminiProvider : IMultimodalVoiceProvider, ISpeechToTextProvider, I
         try
         {
             var base64Audio = Convert.ToBase64String(audioWav);
-            var systemInstruction = PromptBuilder.BuildSystemPrompt(availableCommands);
+            var optimizePayload = _settingsService?.CurrentSettings?.OptimizePromptPayload ?? true;
+            var systemInstruction = PromptBuilder.BuildSystemPrompt(availableCommands, optimizePayload);
 
             var requestBody = new
             {
@@ -273,7 +276,8 @@ public class GeminiProvider : IMultimodalVoiceProvider, ISpeechToTextProvider, I
 
         try
         {
-            var systemInstruction = PromptBuilder.BuildSystemPrompt(availableCommands);
+            var optimizePayload = _settingsService?.CurrentSettings?.OptimizePromptPayload ?? true;
+            var systemInstruction = PromptBuilder.BuildSystemPrompt(availableCommands, optimizePayload);
             var userPrompt = PromptBuilder.BuildUserPrompt(transcript);
 
             var requestBody = new
