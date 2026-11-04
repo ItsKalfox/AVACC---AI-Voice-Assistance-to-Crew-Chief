@@ -43,6 +43,14 @@ public class AppSettings
     // AI Prompt Optimization
     public bool OptimizePromptPayload { get; set; } = true;
 
+    // Crew Chief Integration Bridge
+    public bool EnableCrewChiefBridge { get; set; } = true;
+    public bool AutoSendToCrewChief { get; set; } = true;
+    public string? CrewChiefAudioOutputDeviceId { get; set; }
+    public string? CrewChiefAudioOutputDeviceName { get; set; }
+    public string CrewChiefPttKey { get; set; } = "None";
+    public int TtsSpeechRate { get; set; } = 2;
+
     // Diagnostics & Privacy
     public bool EnableDiagnosticLogging { get; set; } = true;
     public bool SaveAudioRecordingsToDisk { get; set; } = false; // Never retain raw audio by default

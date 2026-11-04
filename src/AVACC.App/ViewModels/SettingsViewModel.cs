@@ -13,6 +13,8 @@ public class SettingsViewModel : ObservableObject
     private readonly IModelDiscoveryService _modelDiscoveryService;
     private readonly IAudioCaptureService _audioCaptureService;
     private readonly IEventLogService _eventLogService;
+    private readonly ICrewChiefBridgeService _crewChiefBridge;
+    private readonly ICrewChiefMonitorService _crewChiefMonitor;
 
     // Architecture
     private bool _isSimpleMode = true;
@@ -63,6 +65,23 @@ public class SettingsViewModel : ObservableObject
     private int _sampleRate = 16000;
     private float _inputBoost = 1.0f;
     private string _audioTestStatus = string.Empty;
+
+    // Crew Chief Integration settings
+    public ObservableCollection<AudioDeviceInfo> AvailablePlaybackDevices { get; } = new();
+    public ObservableCollection<string> AvailableCrewChiefPttKeys { get; } = new()
+    {
+        "None", "Insert", "Delete", "Home", "End", "PageUp", "PageDown",
+        "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+        "F13", "F14", "F15", "F16", "ScrollLock", "Pause"
+    };
+
+    private bool _enableCrewChiefBridge = true;
+    private bool _autoSendToCrewChief = true;
+    private AudioDeviceInfo? _selectedPlaybackDevice;
+    private string _crewChiefPttKey = "None";
+    private int _ttsSpeechRate = 2;
+    private string _crewChiefTestStatus = string.Empty;
+    private bool _isTestingBridge;
 
     public bool IsSimpleMode
     {
@@ -247,12 +266,56 @@ public class SettingsViewModel : ObservableObject
         set => SetProperty(ref _audioTestStatus, value);
     }
 
+    public bool EnableCrewChiefBridge
+    {
+        get => _enableCrewChiefBridge;
+        set => SetProperty(ref _enableCrewChiefBridge, value);
+    }
+
+    public bool AutoSendToCrewChief
+    {
+        get => _autoSendToCrewChief;
+        set => SetProperty(ref _autoSendToCrewChief, value);
+    }
+
+    public AudioDeviceInfo? SelectedPlaybackDevice
+    {
+        get => _selectedPlaybackDevice;
+        set => SetProperty(ref _selectedPlaybackDevice, value);
+    }
+
+    public string CrewChiefPttKey
+    {
+        get => _crewChiefPttKey;
+        set => SetProperty(ref _crewChiefPttKey, value);
+    }
+
+    public int TtsSpeechRate
+    {
+        get => _ttsSpeechRate;
+        set => SetProperty(ref _ttsSpeechRate, value);
+    }
+
+    public string CrewChiefTestStatus
+    {
+        get => _crewChiefTestStatus;
+        set => SetProperty(ref _crewChiefTestStatus, value);
+    }
+
+    public bool IsTestingBridge
+    {
+        get => _isTestingBridge;
+        set => SetProperty(ref _isTestingBridge, value);
+    }
+
     // Commands
     public AsyncRelayCommand SaveApiKeyCommand { get; }
     public AsyncRelayCommand RemoveApiKeyCommand { get; }
     public AsyncRelayCommand TestConnectionCommand { get; }
     public AsyncRelayCommand RefreshModelsCommand { get; }
     public AsyncRelayCommand RefreshAudioDevicesCommand { get; }
+    public AsyncRelayCommand RefreshPlaybackDevicesCommand { get; }
+    public AsyncRelayCommand TestCrewChiefBridgeCommand { get; }
     public AsyncRelayCommand SaveSettingsCommand { get; }
 
     public SettingsViewModel(
@@ -260,19 +323,25 @@ public class SettingsViewModel : ObservableObject
         ISecureKeyStorage secureKeyStorage,
         IModelDiscoveryService modelDiscoveryService,
         IAudioCaptureService audioCaptureService,
-        IEventLogService eventLogService)
+        IEventLogService eventLogService,
+        ICrewChiefBridgeService crewChiefBridge,
+        ICrewChiefMonitorService crewChiefMonitor)
     {
         _settingsService = settingsService;
         _secureKeyStorage = secureKeyStorage;
         _modelDiscoveryService = modelDiscoveryService;
         _audioCaptureService = audioCaptureService;
         _eventLogService = eventLogService;
+        _crewChiefBridge = crewChiefBridge;
+        _crewChiefMonitor = crewChiefMonitor;
 
         SaveApiKeyCommand = new AsyncRelayCommand(SaveApiKeyAsync);
         RemoveApiKeyCommand = new AsyncRelayCommand(RemoveApiKeyAsync);
         TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync);
         RefreshModelsCommand = new AsyncRelayCommand(RefreshModelsAsync);
         RefreshAudioDevicesCommand = new AsyncRelayCommand(RefreshAudioDevicesAsync);
+        RefreshPlaybackDevicesCommand = new AsyncRelayCommand(RefreshPlaybackDevicesAsync);
+        TestCrewChiefBridgeCommand = new AsyncRelayCommand(TestCrewChiefBridgeAsync);
         SaveSettingsCommand = new AsyncRelayCommand(SaveAllSettingsAsync);
 
         LoadInitialSettings();
@@ -301,11 +370,17 @@ public class SettingsViewModel : ObservableObject
         SampleRate = s.AudioSampleRate;
         InputBoost = s.InputLevelBoost;
 
+        EnableCrewChiefBridge = s.EnableCrewChiefBridge;
+        AutoSendToCrewChief = s.AutoSendToCrewChief;
+        CrewChiefPttKey = s.CrewChiefPttKey;
+        TtsSpeechRate = s.TtsSpeechRate;
+
         _ = CheckExistingKeyAsync();
         _ = RefreshModelsAsync();
         _ = RefreshSttModelsAsync();
         _ = RefreshLlmModelsAsync();
         _ = RefreshAudioDevicesAsync();
+        _ = RefreshPlaybackDevicesAsync();
     }
 
     public async Task CheckExistingKeyAsync()
@@ -441,6 +516,64 @@ public class SettingsViewModel : ObservableObject
             ?? AvailableAudioDevices.FirstOrDefault();
     }
 
+    private Task RefreshPlaybackDevicesAsync()
+    {
+        AvailablePlaybackDevices.Clear();
+        var devices = _crewChiefBridge.GetPlaybackDevices();
+        foreach (var dev in devices)
+        {
+            AvailablePlaybackDevices.Add(dev);
+        }
+
+        var s = _settingsService.CurrentSettings;
+        if (!string.IsNullOrEmpty(s.CrewChiefAudioOutputDeviceId))
+        {
+            SelectedPlaybackDevice = AvailablePlaybackDevices.FirstOrDefault(d => d.Id == s.CrewChiefAudioOutputDeviceId)
+                ?? AvailablePlaybackDevices.FirstOrDefault(d => d.Name == s.CrewChiefAudioOutputDeviceName);
+        }
+
+        if (SelectedPlaybackDevice == null)
+        {
+            // Suggest Virtual Cable if present, otherwise default
+            SelectedPlaybackDevice = AvailablePlaybackDevices.FirstOrDefault(d => d.Name.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+                ?? AvailablePlaybackDevices.FirstOrDefault(d => d.IsDefault)
+                ?? AvailablePlaybackDevices.FirstOrDefault();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task TestCrewChiefBridgeAsync()
+    {
+        IsTestingBridge = true;
+        CrewChiefTestStatus = "Playing test phrase 'radio check' through selected audio device...";
+        _eventLogService.LogInfo($"Testing Crew Chief TTS bridge on device: {SelectedPlaybackDevice?.Name ?? "Default"}");
+
+        try
+        {
+            var success = await _crewChiefBridge.SpeakPhraseAsync("radio check");
+            if (success)
+            {
+                CrewChiefTestStatus = "Test audio successfully played to device!";
+                _eventLogService.LogInfo("Crew Chief audio bridge test succeeded. Trigger phrase 'radio check' synthesized.");
+            }
+            else
+            {
+                CrewChiefTestStatus = "Test playback failed. Check device selection and Windows audio settings.";
+                _eventLogService.LogError("Crew Chief audio bridge test playback failed.");
+            }
+        }
+        catch (Exception ex)
+        {
+            CrewChiefTestStatus = $"Error: {ex.Message}";
+            _eventLogService.LogError($"Crew Chief test error: {ex.Message}");
+        }
+        finally
+        {
+            IsTestingBridge = false;
+        }
+    }
+
     public async Task SaveAllSettingsAsync()
     {
         var s = _settingsService.CurrentSettings;
@@ -469,6 +602,18 @@ public class SettingsViewModel : ObservableObject
 
         s.AudioSampleRate = SampleRate;
         s.InputLevelBoost = InputBoost;
+
+        // Crew Chief settings
+        s.EnableCrewChiefBridge = EnableCrewChiefBridge;
+        s.AutoSendToCrewChief = AutoSendToCrewChief;
+        s.CrewChiefPttKey = CrewChiefPttKey;
+        s.TtsSpeechRate = TtsSpeechRate;
+
+        if (SelectedPlaybackDevice != null)
+        {
+            s.CrewChiefAudioOutputDeviceId = SelectedPlaybackDevice.Id;
+            s.CrewChiefAudioOutputDeviceName = SelectedPlaybackDevice.Name;
+        }
 
         await _settingsService.SaveSettingsAsync(s);
         _eventLogService.LogInfo("All configuration settings saved.");

@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Crew Chief Process Monitor & Auto-Launch (`ICrewChiefMonitorService`):**
+  - Real-time polling service detecting `CrewChiefV4.exe` execution state (`Running`, `Active`, or `Offline`).
+  - Added a status badge in the top navigation header with live indicator light and a one-click "Launch" button to start Crew Chief if it is offline.
+- **Crew Chief Zero-Token Offline TTS Bridge (`ICrewChiefBridgeService`):**
+  - Integrated local Windows Speech Synthesis (`System.Speech.Synthesis`) routed through NAudio `WasapiOut` directly into a selectable virtual playback device (e.g., VB-Audio Virtual Cable) listened to by Crew Chief.
+  - Complete mapping of 180+ Crew Chief commands to their exact canonical voice trigger phrases (e.g., `HOWS_MY_AERO` -> `"how's my aero"`).
+  - Optional simulated Win32 PTT key stroke (`keybd_event`) for Crew Chief before and after TTS audio playback.
+  - "▶ Send to Crew Chief" action button in the Visual CMD suggested command card with live transmission status and canonical trigger phrase display.
+  - Auto-forward toggle (`AutoSendToCrewChief`) to push recognized voice commands automatically upon detection.
+- **Crew Chief Integration Settings Panel:**
+  - Added dedicated configuration card in Settings tab: Bridge Enable/Disable, Auto-Send toggle, Virtual Audio Output Device picker, Crew Chief Simulated PTT Key selector, TTS Speech Rate slider, and an instant "Test Audio Bridge" playback button.
 - **CSV Command Bulk Import with Interactive Staging Table:**
   - Added "Import CSV" button in the Command Editor toolbar to load batch commands from standard `.csv` files.
   - Implemented an interactive preview & staging modal overlay where users can edit rows, modify friendly names, command IDs, categories, descriptions, natural language examples, and aliases before confirming the bulk import.

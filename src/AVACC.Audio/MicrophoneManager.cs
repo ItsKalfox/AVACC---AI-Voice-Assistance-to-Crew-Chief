@@ -73,4 +73,61 @@ public class MicrophoneManager
 
         return devices;
     }
+
+    public IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices()
+    {
+        var devices = new List<AudioDeviceInfo>();
+
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            var endpoints = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+
+            MMDevice? defaultDevice = null;
+            try
+            {
+                defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            }
+            catch { }
+
+            foreach (var endpoint in endpoints)
+            {
+                bool isDefault = defaultDevice != null && string.Equals(endpoint.ID, defaultDevice.ID, StringComparison.OrdinalIgnoreCase);
+                int channels = 2;
+                int sampleRate = 44100;
+                try
+                {
+                    var mix = endpoint.AudioClient?.MixFormat;
+                    if (mix != null)
+                    {
+                        channels = mix.Channels;
+                        sampleRate = mix.SampleRate;
+                    }
+                }
+                catch { }
+
+                devices.Add(new AudioDeviceInfo
+                {
+                    Id = endpoint.ID,
+                    Name = endpoint.FriendlyName,
+                    IsDefault = isDefault,
+                    Channels = channels,
+                    SampleRate = sampleRate
+                });
+            }
+        }
+        catch
+        {
+            devices.Add(new AudioDeviceInfo
+            {
+                Id = "default",
+                Name = "Default Windows Playback Device",
+                IsDefault = true,
+                Channels = 2,
+                SampleRate = 44100
+            });
+        }
+
+        return devices;
+    }
 }

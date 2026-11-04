@@ -140,6 +140,66 @@
                                    FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="20,0,0,0" />
                     </StackPanel>
                 </Border>
+
+                <!-- C. CREW CHIEF INTEGRATION (OFFLINE AUDIO BRIDGE) -->
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="CREW CHIEF INTEGRATION (OFFLINE AUDIO BRIDGE)" Style="{StaticResource CardHeaderStyle}" Margin="0" />
+                            <Button Grid.Column="1" Content="Refresh Devices" Command="{Binding RefreshPlaybackDevicesCommand}" Style="{StaticResource ModernButtonStyle}" Padding="8,3" FontSize="11" />
+                        </Grid>
+
+                        <TextBlock Text="Zero-token offline bridge: Synthesizes canonical Crew Chief trigger phrases via local Windows TTS and feeds them into Crew Chief's listening device (e.g. VB-Audio Virtual Cable)." 
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                        <CheckBox Content="Enable Crew Chief Audio Bridge (Offline Windows TTS loopback)" 
+                                  IsChecked="{Binding EnableCrewChiefBridge}" 
+                                  Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,6" />
+
+                        <CheckBox Content="Automatically push recognized commands to Crew Chief" 
+                                  IsChecked="{Binding AutoSendToCrewChief}" 
+                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="20,0,0,10" />
+
+                        <TextBlock Text="Target Audio Device (Virtual Cable for Crew Chief Input):" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
+                        <ComboBox ItemsSource="{Binding AvailablePlaybackDevices}" SelectedItem="{Binding SelectedPlaybackDevice}" Height="28" Margin="0,0,0,10" />
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Crew Chief PTT Simulation Key:" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableCrewChiefPttKeys}" SelectedItem="{Binding CrewChiefPttKey}" Height="26" Width="140" HorizontalAlignment="Left" />
+                        </Grid>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="40" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="TTS Speech Rate:" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                            <Slider Grid.Column="1" Value="{Binding TtsSpeechRate}" Minimum="-5" Maximum="5" SmallChange="1" LargeChange="1" TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding TtsSpeechRate, StringFormat='{}{0:+0;-0;0}'}" FontSize="11" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <!-- Test Button -->
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="Test Audio Bridge (Play 'radio check')" Command="{Binding TestCrewChiefBridgeCommand}" 
+                                    Style="{StaticResource ModernButtonStyle}" Margin="0,0,10,0" />
+                            <TextBlock Grid.Column="1" Text="{Binding CrewChiefTestStatus}" VerticalAlignment="Center" FontSize="10" 
+                                       Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <!-- RIGHT COLUMN: PTT, Audio Capture & Privacy -->

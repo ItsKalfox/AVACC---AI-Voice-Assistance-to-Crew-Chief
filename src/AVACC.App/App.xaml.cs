@@ -53,6 +53,10 @@ public partial class App : Application
         var settings = settingsService.CurrentSettings;
         pttService.Initialize(settings.PttKey, settings.IsGlobalPttEnabled, settings.DisablePttWhenInactive);
 
+        // Initialize Crew Chief Monitor
+        var crewChiefMonitor = _serviceProvider.GetRequiredService<ICrewChiefMonitorService>();
+        crewChiefMonitor.StartMonitoring();
+
         // Show MainWindow
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
@@ -71,11 +75,13 @@ public partial class App : Application
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<ICommandRegistryService, CommandRegistryService>();
         services.AddSingleton<IEventLogService, EventLogService>();
+        services.AddSingleton<ICrewChiefMonitorService, CrewChiefMonitorService>();
 
         // Audio
         services.AddSingleton<MicrophoneManager>();
         services.AddSingleton<IAudioCaptureService, AudioCaptureService>();
         services.AddSingleton<IPushToTalkService, PushToTalkService>();
+        services.AddSingleton<ICrewChiefBridgeService, CrewChiefBridgeService>();
 
         // AI Providers
         services.AddSingleton<GeminiProvider>();
@@ -113,6 +119,11 @@ public partial class App : Application
             if (_serviceProvider.GetService<IAudioCaptureService>() is IDisposable audio)
             {
                 audio.Dispose();
+            }
+
+            if (_serviceProvider.GetService<ICrewChiefMonitorService>() is IDisposable ccMonitor)
+            {
+                ccMonitor.Dispose();
             }
         }
 

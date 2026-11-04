@@ -14,12 +14,20 @@ public class MainViewModel : ObservableObject
     private readonly IEventLogService _eventLogService;
     private readonly ICommandRegistryService _registryService;
     private readonly IAIProviderFactory _providerFactory;
+    private readonly ICrewChiefMonitorService _crewChiefMonitor;
+    private readonly ICrewChiefBridgeService _crewChiefBridge;
 
     private int _selectedTabIndex;
     private string _overallStatus = "IDLE";
     private bool _isPttActive;
     private string _activeProviderInfo = "Google Gemini Flash • Simple Mode";
     private bool _isProcessingVoice;
+    private string _crewChiefStatusDisplay = "Crew Chief: Offline";
+    private string _crewChiefStateColor = "#FF1744";
+    private string _crewChiefStateBackground = "#1F1215";
+    private bool _isCrewChiefRunning;
+    private bool _canLaunchCrewChief = true;
+    private string _crewChiefBridgeStatusText = "Crew Chief Audio Bridge: Initializing...";
 
     public VisualCMDViewModel VisualCMD { get; }
     public CommandEditorViewModel CommandEditor { get; }
@@ -49,7 +57,44 @@ public class MainViewModel : ObservableObject
         set => SetProperty(ref _activeProviderInfo, value);
     }
 
+    public string CrewChiefStatusDisplay
+    {
+        get => _crewChiefStatusDisplay;
+        set => SetProperty(ref _crewChiefStatusDisplay, value);
+    }
+
+    public string CrewChiefStateColor
+    {
+        get => _crewChiefStateColor;
+        set => SetProperty(ref _crewChiefStateColor, value);
+    }
+
+    public string CrewChiefStateBackground
+    {
+        get => _crewChiefStateBackground;
+        set => SetProperty(ref _crewChiefStateBackground, value);
+    }
+
+    public bool IsCrewChiefRunning
+    {
+        get => _isCrewChiefRunning;
+        set => SetProperty(ref _isCrewChiefRunning, value);
+    }
+
+    public bool CanLaunchCrewChief
+    {
+        get => _canLaunchCrewChief;
+        set => SetProperty(ref _canLaunchCrewChief, value);
+    }
+
+    public string CrewChiefBridgeStatusText
+    {
+        get => _crewChiefBridgeStatusText;
+        set => SetProperty(ref _crewChiefBridgeStatusText, value);
+    }
+
     public RelayCommand<object> SelectTabCommand { get; }
+    public AsyncRelayCommand LaunchCrewChiefCommand { get; }
 
     public MainViewModel(
         VisualCMDViewModel visualCmdVm,
@@ -60,7 +105,9 @@ public class MainViewModel : ObservableObject
         IAudioCaptureService audioCaptureService,
         IEventLogService eventLogService,
         ICommandRegistryService registryService,
-        IAIProviderFactory providerFactory)
+        IAIProviderFactory providerFactory,
+        ICrewChiefMonitorService crewChiefMonitor,
+        ICrewChiefBridgeService crewChiefBridge)
     {
         VisualCMD = visualCmdVm;
         CommandEditor = commandEditorVm;
@@ -71,6 +118,8 @@ public class MainViewModel : ObservableObject
         _eventLogService = eventLogService;
         _registryService = registryService;
         _providerFactory = providerFactory;
+        _crewChiefMonitor = crewChiefMonitor;
+        _crewChiefBridge = crewChiefBridge;
 
         SelectTabCommand = new RelayCommand<object>(param =>
         {
@@ -80,13 +129,34 @@ public class MainViewModel : ObservableObject
             }
         });
 
+        LaunchCrewChiefCommand = new AsyncRelayCommand(async () =>
+        {
+            _eventLogService.LogInfo("Attempting to launch Crew Chief process...");
+            var launched = await _crewChiefMonitor.LaunchCrewChiefAsync();
+            if (!launched)
+            {
+                MessageBox.Show(
+                    "Could not automatically locate CrewChiefV4.exe in default Program Files folders.\nPlease launch Crew Chief manually.",
+                    "Crew Chief Launch",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        });
+
         WireEvents();
         UpdateProviderInfo();
+        UpdateCrewChiefDisplay(_crewChiefMonitor.State);
     }
 
     private void WireEvents()
     {
-        _settingsService.SettingsChanged += (s, settings) => UpdateProviderInfo();
+        _settingsService.SettingsChanged += (s, settings) =>
+        {
+            UpdateProviderInfo();
+            UpdateCrewChiefDisplay(_crewChiefMonitor.State);
+        };
+
+        _crewChiefMonitor.StateChanged += (s, state) => UpdateCrewChiefDisplay(state);
 
         _pttService.PttPressed += async (s, e) =>
         {
@@ -305,6 +375,20 @@ public class MainViewModel : ObservableObject
                         Status = result.IsSuccess ? "Success" : "Unmatched",
                         RawJsonResponse = result.RawJsonResponse
                     });
+
+                    // Auto-forward to Crew Chief if enabled
+                    if (settings.EnableCrewChiefBridge && settings.AutoSendToCrewChief && !string.IsNullOrEmpty(result.CommandId) && result.IsSuccess)
+                    {
+                        _eventLogService.LogInfo($"Auto-forwarding '{result.CommandId}' to Crew Chief via TTS audio bridge...");
+                        _ = Task.Run(async () =>
+                        {
+                            var ok = await _crewChiefBridge.SendCommandAsync(result.CommandId);
+                            if (ok)
+                            {
+                                _eventLogService.LogInfo($"Command '{result.CommandId}' successfully dispatched to Crew Chief.");
+                            }
+                        });
+                    }
                 }
             });
         }
@@ -335,5 +419,46 @@ public class MainViewModel : ObservableObject
         VisualCMD.SttModel = s.ArchitectureMode == ProcessingArchitectureMode.Simple ? s.SimpleModel : s.SttModel;
         VisualCMD.LlmProvider = s.ArchitectureMode == ProcessingArchitectureMode.Simple ? s.SimpleProvider : s.LlmProvider;
         VisualCMD.LlmModel = s.ArchitectureMode == ProcessingArchitectureMode.Simple ? s.SimpleModel : s.LlmModel;
+    }
+
+    private void UpdateCrewChiefDisplay(CrewChiefConnectionState state)
+    {
+        Application.Current?.Dispatcher?.Invoke(() =>
+        {
+            var s = _settingsService.CurrentSettings;
+            IsCrewChiefRunning = state != CrewChiefConnectionState.NotRunning;
+            CanLaunchCrewChief = !IsCrewChiefRunning;
+
+            switch (state)
+            {
+                case CrewChiefConnectionState.Active:
+                    CrewChiefStatusDisplay = "Crew Chief: Active";
+                    CrewChiefStateColor = "#00E676";
+                    CrewChiefStateBackground = "#0D2518";
+                    break;
+                case CrewChiefConnectionState.Running:
+                    CrewChiefStatusDisplay = "Crew Chief: Running";
+                    CrewChiefStateColor = "#00E5FF";
+                    CrewChiefStateBackground = "#0B2228";
+                    break;
+                default:
+                    CrewChiefStatusDisplay = "Crew Chief: Offline";
+                    CrewChiefStateColor = "#FF1744";
+                    CrewChiefStateBackground = "#221114";
+                    break;
+            }
+
+            if (!s.EnableCrewChiefBridge)
+            {
+                CrewChiefBridgeStatusText = "Crew Chief Audio Bridge: Disabled";
+            }
+            else
+            {
+                var targetDevice = !string.IsNullOrEmpty(s.CrewChiefAudioOutputDeviceName)
+                    ? s.CrewChiefAudioOutputDeviceName
+                    : "Default Output";
+                CrewChiefBridgeStatusText = $"Crew Chief Audio Bridge: Active (Target: {targetDevice})";
+            }
+        });
     }
 }

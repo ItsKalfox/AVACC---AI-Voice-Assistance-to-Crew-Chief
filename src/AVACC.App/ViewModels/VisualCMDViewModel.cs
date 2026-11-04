@@ -11,6 +11,8 @@ public class VisualCMDViewModel : ObservableObject
     private readonly IEventLogService _eventLogService;
     private readonly ISettingsService _settingsService;
     private readonly IPushToTalkService _pttService;
+    private readonly ICrewChiefBridgeService _crewChiefBridge;
+    private readonly ICrewChiefMonitorService _crewChiefMonitor;
 
     private ProcessingState _currentState = ProcessingState.Idle;
     private string _stateMessage = "Press and hold Right Ctrl to speak.";
@@ -37,6 +39,11 @@ public class VisualCMDViewModel : ObservableObject
     private string? _rawJsonResponse;
     private bool _requiresClarification;
     private string? _errorMessage;
+
+    private bool _canSendToCrewChief;
+    private bool _isSendingToCrewChief;
+    private string _crewChiefSendStatus = string.Empty;
+    private string _crewChiefCanonicalPhrase = string.Empty;
 
     private ProcessingHistoryItem? _selectedHistoryItem;
 
@@ -121,7 +128,37 @@ public class VisualCMDViewModel : ObservableObject
     public string? SuggestedCommandId
     {
         get => _suggestedCommandId;
-        set => SetProperty(ref _suggestedCommandId, value);
+        set
+        {
+            if (SetProperty(ref _suggestedCommandId, value))
+            {
+                UpdateCrewChiefAvailability();
+            }
+        }
+    }
+
+    public bool CanSendToCrewChief
+    {
+        get => _canSendToCrewChief;
+        set => SetProperty(ref _canSendToCrewChief, value);
+    }
+
+    public bool IsSendingToCrewChief
+    {
+        get => _isSendingToCrewChief;
+        set => SetProperty(ref _isSendingToCrewChief, value);
+    }
+
+    public string CrewChiefSendStatus
+    {
+        get => _crewChiefSendStatus;
+        set => SetProperty(ref _crewChiefSendStatus, value);
+    }
+
+    public string CrewChiefCanonicalPhrase
+    {
+        get => _crewChiefCanonicalPhrase;
+        set => SetProperty(ref _crewChiefCanonicalPhrase, value);
     }
 
     public string SuggestedCommandDescription
@@ -199,15 +236,20 @@ public class VisualCMDViewModel : ObservableObject
     public RelayCommand ClearHistoryCommand { get; }
     public RelayCommand TriggerPttDownCommand { get; }
     public RelayCommand TriggerPttUpCommand { get; }
+    public AsyncRelayCommand SendCommandToCrewChiefCommand { get; }
 
     public VisualCMDViewModel(
         IEventLogService eventLogService, 
         ISettingsService settingsService,
-        IPushToTalkService pttService)
+        IPushToTalkService pttService,
+        ICrewChiefBridgeService crewChiefBridge,
+        ICrewChiefMonitorService crewChiefMonitor)
     {
         _eventLogService = eventLogService;
         _settingsService = settingsService;
         _pttService = pttService;
+        _crewChiefBridge = crewChiefBridge;
+        _crewChiefMonitor = crewChiefMonitor;
 
         TriggerPttDownCommand = new RelayCommand(() => _pttService.TriggerPttDown());
         TriggerPttUpCommand = new RelayCommand(() => _pttService.TriggerPttUp());
@@ -215,9 +257,58 @@ public class VisualCMDViewModel : ObservableObject
         ClearHistoryCommand = new RelayCommand(ClearHistoryWithConfirmation);
         CopyLogsCommand = new RelayCommand(CopyLogsToClipboard);
         ExportLogsCommand = new AsyncRelayCommand(ExportLogsToFileAsync);
+        SendCommandToCrewChiefCommand = new AsyncRelayCommand(SendCommandToCrewChiefAsync);
 
         _eventLogService.LogInfo("AVACC Subsystem initialized. Ready for PTT capture.");
-        _eventLogService.LogInfo("Note: Version 0.1 generates and displays command suggestions only (Crew Chief IPC inactive).");
+        _eventLogService.LogInfo("Crew Chief Integration Bridge ready (Offline Windows TTS loopback).");
+    }
+
+    private void UpdateCrewChiefAvailability()
+    {
+        var hasValidCmd = !string.IsNullOrWhiteSpace(_suggestedCommandId) &&
+            !_suggestedCommandId.Contains("AWAITING", StringComparison.OrdinalIgnoreCase) &&
+            !_suggestedCommandId.Contains("NO_MATCHING", StringComparison.OrdinalIgnoreCase) &&
+            !_suggestedCommandId.Contains("ERROR", StringComparison.OrdinalIgnoreCase);
+
+        CanSendToCrewChief = hasValidCmd;
+        CrewChiefCanonicalPhrase = hasValidCmd ? _crewChiefBridge.GetCanonicalPhrase(_suggestedCommandId!) : string.Empty;
+        if (!hasValidCmd)
+        {
+            CrewChiefSendStatus = string.Empty;
+        }
+    }
+
+    private async Task SendCommandToCrewChiefAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SuggestedCommandId) || !CanSendToCrewChief) return;
+
+        IsSendingToCrewChief = true;
+        CrewChiefSendStatus = $"Transmitting \"{CrewChiefCanonicalPhrase}\"...";
+        _eventLogService.LogInfo($"Manually sending command '{SuggestedCommandId}' to Crew Chief (TTS phrase: \"{CrewChiefCanonicalPhrase}\")...");
+
+        try
+        {
+            var success = await _crewChiefBridge.SendCommandAsync(SuggestedCommandId);
+            if (success)
+            {
+                CrewChiefSendStatus = "Transmitted to Crew Chief!";
+                _eventLogService.LogInfo($"Successfully pushed \"{CrewChiefCanonicalPhrase}\" to Crew Chief audio channel.");
+            }
+            else
+            {
+                CrewChiefSendStatus = "Transmission failed. Check audio settings.";
+                _eventLogService.LogError("Failed to push audio to Crew Chief loopback device.");
+            }
+        }
+        catch (Exception ex)
+        {
+            CrewChiefSendStatus = $"Error: {ex.Message}";
+            _eventLogService.LogError($"Crew Chief bridge exception: {ex.Message}");
+        }
+        finally
+        {
+            IsSendingToCrewChief = false;
+        }
     }
 
     private void ClearHistoryWithConfirmation()
