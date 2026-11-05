@@ -36,3 +36,4 @@ public class PushToTalkKeyTests
         Assert.Equal(expectedMatch, match);
     }
 }
+

@@ -287,6 +287,11 @@
                 <Setter Property="Foreground" Value="#FFFFFF" />
             </Style>
 
+            <Style x:Key="OutlineButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+            </Style>
+
             <!-- TextBoxes -->
             <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
                 <Setter Property="Background" Value="{StaticResource InputBgBrush}" />
