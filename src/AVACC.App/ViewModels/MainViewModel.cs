@@ -146,6 +146,7 @@ public class MainViewModel : ObservableObject
         WireEvents();
         UpdateProviderInfo();
         UpdateCrewChiefDisplay(_crewChiefMonitor.State);
+        VisualCMD.StateMessage = $"Press and hold {_pttService.ConfiguredKey} to speak.";
     }
 
     private void WireEvents()
@@ -154,6 +155,10 @@ public class MainViewModel : ObservableObject
         {
             UpdateProviderInfo();
             UpdateCrewChiefDisplay(_crewChiefMonitor.State);
+            if (VisualCMD.CurrentState == ProcessingState.Idle)
+            {
+                VisualCMD.StateMessage = $"Press and hold {_pttService.ConfiguredKey} to speak.";
+            }
         };
 
         _crewChiefMonitor.StateChanged += (s, state) => UpdateCrewChiefDisplay(state);
@@ -260,6 +265,8 @@ public class MainViewModel : ObservableObject
         {
             var settings = _settingsService.CurrentSettings;
             var commands = _registryService.Commands;
+            var activeCount = commands.Count(c => c.IsEnabled);
+            _eventLogService.LogInfo($"AI prompt schema prepared with {activeCount} active commands (of {commands.Count} total registered).");
 
             VoiceCommandResult result;
 

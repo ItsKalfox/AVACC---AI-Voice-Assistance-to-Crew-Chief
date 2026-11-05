@@ -107,3 +107,4 @@ public class CrewChiefPhraseHelperTests
         Assert.Equal("what's position four's last lap", resolved);
     }
 }
+

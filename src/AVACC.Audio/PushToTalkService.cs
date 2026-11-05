@@ -15,12 +15,15 @@ public class PushToTalkService : IPushToTalkService
     private bool _isGlobal = true;
     private bool _disableWhenInactive = false;
     private bool _isKeyPressed;
+    private bool _isCapturingBinding;
 
     public bool IsActive => _isActive;
     public string ConfiguredKey => _configuredKey;
+    public bool IsCapturingBinding => _isCapturingBinding;
 
     public event EventHandler? PttPressed;
     public event EventHandler? PttReleased;
+    public event EventHandler<string>? KeyDetectedForBinding;
 
     public PushToTalkService(ILogger<PushToTalkService>? logger = null)
     {
@@ -45,10 +48,29 @@ public class PushToTalkService : IPushToTalkService
         _isGlobal = isGlobal;
         _disableWhenInactive = disableWhenInactive;
 
+        _logger?.LogInformation("Updating PTT configuration: Key={Key}, Global={Global}, DisableWhenInactive={Disable}", _configuredKey, _isGlobal, _disableWhenInactive);
+
         UnregisterHook();
         if (_isGlobal)
         {
             RegisterHook();
+        }
+    }
+
+    public void StartCapturingBinding()
+    {
+        _isCapturingBinding = true;
+        _logger?.LogInformation("Started capturing key for PTT binding...");
+        RegisterHook(); // Ensure hook is active to intercept the key
+    }
+
+    public void StopCapturingBinding()
+    {
+        _isCapturingBinding = false;
+        _logger?.LogInformation("Stopped capturing key for PTT binding.");
+        if (!_isGlobal)
+        {
+            UnregisterHook();
         }
     }
 
@@ -117,17 +139,36 @@ public class PushToTalkService : IPushToTalkService
         {
             var vkCode = Marshal.ReadInt32(lParam);
             var flags = Marshal.ReadInt32(lParam, 8);
-            var isTargetKey = IsTargetKey(vkCode, flags);
+            var msg = (int)wParam;
+
+            // 1. Interactive Key Capture for Binding
+            if (_isCapturingBinding)
+            {
+                if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN)
+                {
+                    var detectedName = VkCodeToKeyName(vkCode, flags);
+                    _isCapturingBinding = false;
+                    _logger?.LogInformation("Detected key for binding: {Key} (VK: 0x{VkCode:X})", detectedName, vkCode);
+
+                    // Raise on background / thread pool
+                    Task.Run(() => KeyDetectedForBinding?.Invoke(this, detectedName));
+
+                    return (IntPtr)1; // Consume key down event during binding capture
+                }
+                return CallNextHookEx(_hookId, nCode, wParam, lParam);
+            }
+
+            // 2. Normal PTT Execution
+            var isTargetKey = MatchesKey(vkCode, flags, _configuredKey);
 
             if (isTargetKey)
             {
-                var msg = (int)wParam;
                 if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN)
                 {
                     if (!_isKeyPressed)
                     {
                         _isKeyPressed = true;
-                        _logger?.LogInformation("PTT key down detected (VK: 0x{VkCode:X}, Flags: 0x{Flags:X})", vkCode, flags);
+                        _logger?.LogInformation("PTT key down detected: {Key} (VK: 0x{VkCode:X})", _configuredKey, vkCode);
                         PttPressed?.Invoke(this, EventArgs.Empty);
                     }
                 }
@@ -136,7 +177,7 @@ public class PushToTalkService : IPushToTalkService
                     if (_isKeyPressed)
                     {
                         _isKeyPressed = false;
-                        _logger?.LogInformation("PTT key up detected (VK: 0x{VkCode:X}, Flags: 0x{Flags:X})", vkCode, flags);
+                        _logger?.LogInformation("PTT key up detected: {Key} (VK: 0x{VkCode:X})", _configuredKey, vkCode);
                         PttReleased?.Invoke(this, EventArgs.Empty);
                     }
                 }
@@ -146,40 +187,94 @@ public class PushToTalkService : IPushToTalkService
         return CallNextHookEx(_hookId, nCode, wParam, lParam);
     }
 
-    private bool IsTargetKey(int vkCode, int flags)
+    public static bool MatchesKey(int vkCode, int flags, string configuredKey)
     {
+        if (string.IsNullOrWhiteSpace(configuredKey)) return false;
+
         var isExtended = (flags & 1) != 0;
-        var key = _configuredKey.Trim().ToUpperInvariant();
+        var key = configuredKey.Trim().ToUpperInvariant();
+
+        // Direct numeric VK codes (e.g. "0x21" or "33")
+        if (key.StartsWith("0X") && int.TryParse(key.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out var hexVk))
+        {
+            return vkCode == hexVk;
+        }
+        if (int.TryParse(key, out var decVk))
+        {
+            return vkCode == decVk;
+        }
 
         switch (key)
         {
+            // Control
             case "RIGHTCTRL" or "RCONTROL" or "RCTRL":
                 return vkCode == VK_RCONTROL || (vkCode == VK_CONTROL && isExtended);
-
             case "LEFTCTRL" or "LCONTROL" or "LCTRL":
                 return vkCode == VK_LCONTROL || (vkCode == VK_CONTROL && !isExtended);
-
             case "CTRL" or "CONTROL":
                 return vkCode == VK_CONTROL || vkCode == VK_LCONTROL || vkCode == VK_RCONTROL;
 
+            // Alt
             case "RIGHTALT" or "RALT" or "ALTGR":
                 return vkCode == 0xA5 || (vkCode == 0x12 && isExtended);
-
             case "LEFTALT" or "LALT":
                 return vkCode == 0xA4 || (vkCode == 0x12 && !isExtended);
-
             case "ALT":
                 return vkCode == 0x12 || vkCode == 0xA4 || vkCode == 0xA5;
 
-            case "SPACE":
+            // Shift
+            case "LEFTSHIFT" or "LSHIFT":
+                return vkCode == 0xA0;
+            case "RIGHTSHIFT" or "RSHIFT":
+                return vkCode == 0xA1;
+            case "SHIFT":
+                return vkCode == 0x10 || vkCode == 0xA0 || vkCode == 0xA1;
+
+            // Navigation & Page
+            case "PAGEUP" or "PGUP" or "PRIOR":
+                return vkCode == 0x21;
+            case "PAGEDOWN" or "PGDN" or "NEXT":
+                return vkCode == 0x22;
+            case "END":
+                return vkCode == 0x23;
+            case "HOME":
+                return vkCode == 0x24;
+            case "LEFT" or "LEFTARROW":
+                return vkCode == 0x25;
+            case "UP" or "UPARROW":
+                return vkCode == 0x26;
+            case "RIGHT" or "RIGHTARROW":
+                return vkCode == 0x27;
+            case "DOWN" or "DOWNARROW":
+                return vkCode == 0x28;
+            case "INSERT" or "INS":
+                return vkCode == 0x2D;
+            case "DELETE" or "DEL":
+                return vkCode == 0x2E;
+
+            // Common keys
+            case "SPACE" or "SPACEBAR":
                 return vkCode == VK_SPACE;
-
-            case "CAPSLOCK" or "CAPS":
-                return vkCode == 0x14;
-
             case "TAB":
                 return vkCode == 0x09;
+            case "RETURN" or "ENTER":
+                return vkCode == 0x0D;
+            case "BACKSPACE" or "BACK":
+                return vkCode == 0x08;
+            case "ESCAPE" or "ESC":
+                return vkCode == 0x1B;
+            case "CAPSLOCK" or "CAPS" or "CAPITAL":
+                return vkCode == 0x14;
+            case "SCROLLLOCK" or "SCROLL":
+                return vkCode == 0x91;
+            case "PAUSE" or "BREAK":
+                return vkCode == 0x13;
+            case "PRINTSCREEN" or "SNAPSHOT":
+                return vkCode == 0x2C;
+            case "NUMLOCK":
+                return vkCode == 0x90;
 
+            // Function keys F1 - F24
             case "F1": return vkCode == 0x70;
             case "F2": return vkCode == 0x71;
             case "F3": return vkCode == 0x72;
@@ -192,14 +287,104 @@ public class PushToTalkService : IPushToTalkService
             case "F10": return vkCode == 0x79;
             case "F11": return vkCode == 0x7A;
             case "F12": return vkCode == 0x7B;
+            case "F13": return vkCode == 0x7C;
+            case "F14": return vkCode == 0x7D;
+            case "F15": return vkCode == 0x7E;
+            case "F16": return vkCode == 0x7F;
 
+            // NumPad keys
+            case "NUMPAD0" or "NUM0": return vkCode == 0x60;
+            case "NUMPAD1" or "NUM1": return vkCode == 0x61;
+            case "NUMPAD2" or "NUM2": return vkCode == 0x62;
+            case "NUMPAD3" or "NUM3": return vkCode == 0x63;
+            case "NUMPAD4" or "NUM4": return vkCode == 0x64;
+            case "NUMPAD5" or "NUM5": return vkCode == 0x65;
+            case "NUMPAD6" or "NUM6": return vkCode == 0x66;
+            case "NUMPAD7" or "NUM7": return vkCode == 0x67;
+            case "NUMPAD8" or "NUM8": return vkCode == 0x68;
+            case "NUMPAD9" or "NUM9": return vkCode == 0x69;
+            case "MULTIPLY": return vkCode == 0x6A;
+            case "ADD": return vkCode == 0x6B;
+            case "SUBTRACT": return vkCode == 0x6D;
+            case "DECIMAL": return vkCode == 0x6E;
+            case "DIVIDE": return vkCode == 0x6F;
+
+            // Single letters A-Z and digits 0-9
             default:
-                if (key.Length == 1 && ((key[0] >= 'A' && key[0] <= 'Z') || (key[0] >= '0' && key[0] <= '9')))
+                if (key.Length == 1)
                 {
-                    return vkCode == (int)key[0];
+                    char c = key[0];
+                    if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
+                    {
+                        return vkCode == (int)c;
+                    }
                 }
-                return vkCode == VK_RCONTROL || (vkCode == VK_CONTROL && isExtended);
+                return false;
         }
+    }
+
+    public static string VkCodeToKeyName(int vkCode, int flags)
+    {
+        var isExtended = (flags & 1) != 0;
+
+        // Modifiers with extended differentiation
+        if (vkCode == 0x11 || vkCode == 0xA2 || vkCode == 0xA3)
+        {
+            return (vkCode == 0xA3 || isExtended) ? "RightCtrl" : "LeftCtrl";
+        }
+        if (vkCode == 0x12 || vkCode == 0xA4 || vkCode == 0xA5)
+        {
+            return (vkCode == 0xA5 || isExtended) ? "RightAlt" : "LeftAlt";
+        }
+        if (vkCode == 0x10 || vkCode == 0xA0 || vkCode == 0xA1)
+        {
+            return (vkCode == 0xA1) ? "RightShift" : "LeftShift";
+        }
+
+        return vkCode switch
+        {
+            0x20 => "Space",
+            0x09 => "Tab",
+            0x0D => "Enter",
+            0x08 => "Backspace",
+            0x1B => "Escape",
+            0x14 => "CapsLock",
+            0x13 => "Pause",
+            0x91 => "ScrollLock",
+            0x90 => "NumLock",
+            0x2C => "PrintScreen",
+            0x21 => "PageUp",
+            0x22 => "PageDown",
+            0x23 => "End",
+            0x24 => "Home",
+            0x25 => "Left",
+            0x26 => "Up",
+            0x27 => "Right",
+            0x28 => "Down",
+            0x2D => "Insert",
+            0x2E => "Delete",
+            >= 0x30 and <= 0x39 => ((char)vkCode).ToString(),
+            >= 0x41 and <= 0x5A => ((char)vkCode).ToString(),
+            >= 0x60 and <= 0x69 => $"NumPad{vkCode - 0x60}",
+            0x6A => "Multiply",
+            0x6B => "Add",
+            0x6D => "Subtract",
+            0x6E => "Decimal",
+            0x6F => "Divide",
+            >= 0x70 and <= 0x87 => $"F{vkCode - 0x70 + 1}",
+            0xBA => "Semicolon",
+            0xBB => "Equals",
+            0xBC => "Comma",
+            0xBD => "Minus",
+            0xBE => "Period",
+            0xBF => "Slash",
+            0xC0 => "Tilde",
+            0xDB => "LeftBracket",
+            0xDC => "Backslash",
+            0xDD => "RightBracket",
+            0xDE => "Quote",
+            _ => $"0x{vkCode:X2}"
+        };
     }
 
     public void Dispose()
@@ -236,4 +421,3 @@ public class PushToTalkService : IPushToTalkService
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
     #endregion
 }
-

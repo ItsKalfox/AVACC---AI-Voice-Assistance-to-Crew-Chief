@@ -102,3 +102,16 @@ public class EqualityToVisibilityConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotImplementedException();
 }
+
+public class BoolToBrushConverter : IValueConverter
+{
+    public Brush TrueBrush { get; set; } = new SolidColorBrush(Color.FromRgb(255, 171, 0)); // Amber warning
+    public Brush FalseBrush { get; set; } = new SolidColorBrush(Color.FromRgb(25, 28, 36));
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return (value is bool b && b) ? TrueBrush : FalseBrush;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotImplementedException();
+}

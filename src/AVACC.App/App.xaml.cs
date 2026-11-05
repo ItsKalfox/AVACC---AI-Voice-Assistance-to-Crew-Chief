@@ -53,6 +53,11 @@ public partial class App : Application
         var settings = settingsService.CurrentSettings;
         pttService.Initialize(settings.PttKey, settings.IsGlobalPttEnabled, settings.DisablePttWhenInactive);
 
+        settingsService.SettingsChanged += (s, newSettings) =>
+        {
+            pttService.UpdateConfiguration(newSettings.PttKey, newSettings.IsGlobalPttEnabled, newSettings.DisablePttWhenInactive);
+        };
+
         // Initialize Crew Chief Monitor
         var crewChiefMonitor = _serviceProvider.GetRequiredService<ICrewChiefMonitorService>();
         crewChiefMonitor.StartMonitoring();

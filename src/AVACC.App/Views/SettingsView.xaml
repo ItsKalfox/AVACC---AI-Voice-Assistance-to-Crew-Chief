@@ -210,13 +210,25 @@
                     <StackPanel>
                         <TextBlock Text="PUSH-TO-TALK CONFIGURATION" Style="{StaticResource CardHeaderStyle}" />
 
-                        <Grid Margin="0,0,0,8">
+                        <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="140" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="PTT Trigger Key:" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                            <TextBox Grid.Column="1" Text="{Binding PttKey, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CodeBoxStyle}" Width="160" HorizontalAlignment="Left" />
+                            <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Command="{Binding RecordPttKeyCommand}"
+                                        Content="{Binding PttKeyButtonText}"
+                                        Height="28" Padding="12,0" Margin="0,0,8,4"
+                                        FontWeight="SemiBold"
+                                        Background="{Binding IsListeningForPttKey, Converter={StaticResource BoolToBrushConverter}}"
+                                        BorderBrush="{StaticResource AccentCyanBrush}" />
+                                <Button Command="{Binding ResetPttKeyToDefaultCommand}"
+                                        Content="Reset"
+                                        Style="{StaticResource OutlineButtonStyle}"
+                                        Height="28" Padding="8,0" FontSize="11" Margin="0,0,8,4" />
+                                <TextBox Text="{Binding PttKey, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CodeBoxStyle}" Width="90" Height="28" VerticalAlignment="Center" Margin="0,0,0,4" ToolTip="Manual key name or VK code (e.g. PageUp, RightCtrl, V)" />
+                            </WrapPanel>
                         </Grid>
 
                         <CheckBox Content="Enable Global Keyboard Hook (Works while in Assetto Corsa Competizione)" 

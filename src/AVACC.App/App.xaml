@@ -10,6 +10,7 @@
             <converters:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVisibilityConverter" />
             <converters:EqualityToBooleanConverter x:Key="EqualityToBooleanConverter" />
             <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
+            <converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
             <!-- Color Palette -->

@@ -63,12 +63,18 @@
 
                     <Grid Grid.Row="0" Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="COMMAND REGISTRY" Style="{StaticResource CardHeaderStyle}" Margin="0" />
-                        <TextBlock Grid.Column="1" Text="{Binding Commands.Count, StringFormat='{}{0} registered commands'}" 
-                                   FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock Grid.Column="0" Text="COMMAND REGISTRY" Style="{StaticResource CardHeaderStyle}" Margin="0,0,10,0" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding ActiveCommandsCountText}" 
+                                   FontSize="11" Foreground="#4ADE80" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Enable All" Command="{Binding EnableAllCommand}" Style="{StaticResource ModernButtonStyle}" Padding="6,2" Margin="0,0,4,0" FontSize="10" ToolTip="Enable all commands for AI selection" />
+                            <Button Content="Disable All" Command="{Binding DisableAllCommand}" Style="{StaticResource ModernButtonStyle}" Padding="6,2" Margin="0,0,4,0" FontSize="10" ToolTip="Disable all commands to send minimum tokens" />
+                            <Button Content="Disable Rally" Command="{Binding DisableRallyCommand}" Style="{StaticResource ModernButtonStyle}" Padding="6,2" FontSize="10" ToolTip="Disable all Rally pace notes to save tokens for circuit racing" />
+                        </StackPanel>
                     </Grid>
 
                     <Border Grid.Row="1" Background="#0C0D10" CornerRadius="4" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
@@ -79,7 +85,7 @@
                                   Foreground="{StaticResource TextPrimaryBrush}" HorizontalGridLinesBrush="#1F232B"
                                   BorderThickness="0" SelectionMode="Single">
                             <DataGrid.Columns>
-                                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsEnabled}" Width="50" />
+                                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}" Width="55" />
                                 <DataGridTextColumn Header="Friendly Name" Binding="{Binding Name}" Width="140" FontWeight="SemiBold" />
                                 <DataGridTextColumn Header="Crew Chief Command ID" Binding="{Binding CrewChiefCommandId}" Width="190" FontFamily="Cascadia Code, Consolas" />
                                 <DataGridTextColumn Header="Voice Line (TTS)" Binding="{Binding VoiceLine}" Width="150" FontStyle="Italic" />

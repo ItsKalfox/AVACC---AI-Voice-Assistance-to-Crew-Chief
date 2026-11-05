@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows;
 using AVACC.Core.Commands;
 using AVACC.Core.Configuration;
 using AVACC.Core.Interfaces;
@@ -16,6 +17,7 @@ public class SettingsViewModel : ObservableObject
     private readonly ICrewChiefBridgeService _crewChiefBridge;
     private readonly ICrewChiefMonitorService _crewChiefMonitor;
     private readonly ICommandRegistryService _registryService;
+    private readonly IPushToTalkService _pttService;
 
     // Architecture
     private bool _isSimpleMode = true;
@@ -52,6 +54,7 @@ public class SettingsViewModel : ObservableObject
 
     // PTT settings
     private string _pttKey = "RightCtrl";
+    private bool _isListeningForPttKey;
     private bool _isGlobalPtt = true;
     private bool _disablePttWhenInactive;
     private int _maxRecordingDuration = 10;
@@ -204,8 +207,30 @@ public class SettingsViewModel : ObservableObject
     public string PttKey
     {
         get => _pttKey;
-        set => SetProperty(ref _pttKey, value);
+        set
+        {
+            if (SetProperty(ref _pttKey, value))
+            {
+                OnPropertyChanged(nameof(PttKeyButtonText));
+            }
+        }
     }
+
+    public bool IsListeningForPttKey
+    {
+        get => _isListeningForPttKey;
+        set
+        {
+            if (SetProperty(ref _isListeningForPttKey, value))
+            {
+                OnPropertyChanged(nameof(PttKeyButtonText));
+            }
+        }
+    }
+
+    public string PttKeyButtonText => IsListeningForPttKey
+        ? "🔴 Listening... Press any key"
+        : $"⌨ Bound Key: {PttKey} (Click to Record)";
 
     public bool IsGlobalPtt
     {
@@ -331,6 +356,8 @@ public class SettingsViewModel : ObservableObject
     public AsyncRelayCommand RefreshPlaybackDevicesCommand { get; }
     public AsyncRelayCommand TestCrewChiefBridgeCommand { get; }
     public AsyncRelayCommand SaveSettingsCommand { get; }
+    public RelayCommand RecordPttKeyCommand { get; }
+    public RelayCommand ResetPttKeyToDefaultCommand { get; }
 
     public SettingsViewModel(
         ISettingsService settingsService,
@@ -340,7 +367,8 @@ public class SettingsViewModel : ObservableObject
         IEventLogService eventLogService,
         ICrewChiefBridgeService crewChiefBridge,
         ICrewChiefMonitorService crewChiefMonitor,
-        ICommandRegistryService registryService)
+        ICommandRegistryService registryService,
+        IPushToTalkService pttService)
     {
         _settingsService = settingsService;
         _secureKeyStorage = secureKeyStorage;
@@ -350,12 +378,27 @@ public class SettingsViewModel : ObservableObject
         _crewChiefBridge = crewChiefBridge;
         _crewChiefMonitor = crewChiefMonitor;
         _registryService = registryService;
+        _pttService = pttService;
+
+        _pttService.KeyDetectedForBinding += (s, detectedKey) =>
+        {
+            Application.Current?.Dispatcher?.Invoke(async () =>
+            {
+                PttKey = detectedKey;
+                IsListeningForPttKey = false;
+                _pttService.UpdateConfiguration(PttKey, IsGlobalPtt, DisablePttWhenInactive);
+                await SaveAllSettingsAsync();
+                _eventLogService.LogInfo($"PTT Trigger Key recorded: '{detectedKey}' and saved.");
+            });
+        };
 
         _registryService.CommandsChanged += (s, e) =>
         {
             OnPropertyChanged(nameof(TestAudioBridgeButtonText));
         };
 
+        RecordPttKeyCommand = new RelayCommand(RecordPttKey);
+        ResetPttKeyToDefaultCommand = new RelayCommand(ResetPttKeyToDefault);
         SaveApiKeyCommand = new AsyncRelayCommand(SaveApiKeyAsync);
         RemoveApiKeyCommand = new AsyncRelayCommand(RemoveApiKeyAsync);
         TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync);
@@ -601,6 +644,32 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
+    private void RecordPttKey()
+    {
+        if (IsListeningForPttKey)
+        {
+            IsListeningForPttKey = false;
+            _pttService.StopCapturingBinding();
+            _eventLogService.LogInfo("PTT key recording cancelled.");
+        }
+        else
+        {
+            IsListeningForPttKey = true;
+            _pttService.StartCapturingBinding();
+            _eventLogService.LogInfo("Listening for PTT key... Press any key on your keyboard.");
+        }
+    }
+
+    private async void ResetPttKeyToDefault()
+    {
+        PttKey = "RightCtrl";
+        IsListeningForPttKey = false;
+        _pttService.StopCapturingBinding();
+        _pttService.UpdateConfiguration(PttKey, IsGlobalPtt, DisablePttWhenInactive);
+        await SaveAllSettingsAsync();
+        _eventLogService.LogInfo("PTT Trigger Key reset to default (RightCtrl).");
+    }
+
     public async Task SaveAllSettingsAsync()
     {
         var s = _settingsService.CurrentSettings;
@@ -642,6 +711,7 @@ public class SettingsViewModel : ObservableObject
             s.CrewChiefAudioOutputDeviceName = SelectedPlaybackDevice.Name;
         }
 
+        _pttService.UpdateConfiguration(PttKey, IsGlobalPtt, DisablePttWhenInactive);
         await _settingsService.SaveSettingsAsync(s);
         _eventLogService.LogInfo("All configuration settings saved.");
     }

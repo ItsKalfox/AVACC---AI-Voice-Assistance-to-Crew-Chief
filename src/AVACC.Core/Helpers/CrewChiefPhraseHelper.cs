@@ -205,10 +205,47 @@ public static class CrewChiefPhraseHelper
             return (amt, unit);
         }
 
-        // Check for words like "twenty laps", "fifteen minutes"
+        // Check for compound number words like "twenty-five laps", "thirty two minutes"
+        var compoundMatch = Regex.Match(text, @"\b(twenty|thirty|fourty|forty|fifty|sixty|seventy|eighty|ninety)[-\s]+(one|two|three|four|five|six|seven|eight|nine)\s+(laps?|minutes?|mins?|hours?|hrs?)\b", RegexOptions.IgnoreCase);
+        if (compoundMatch.Success)
+        {
+            var tensWord = compoundMatch.Groups[1].Value.ToLowerInvariant();
+            var unitsWord = compoundMatch.Groups[2].Value.ToLowerInvariant();
+            var rawUnit = compoundMatch.Groups[3].Value.ToLowerInvariant();
+
+            int tensVal = tensWord switch
+            {
+                "twenty" => 20,
+                "thirty" => 30,
+                "fourty" or "forty" => 40,
+                "fifty" => 50,
+                "sixty" => 60,
+                "seventy" => 70,
+                "eighty" => 80,
+                "ninety" => 90,
+                _ => 0
+            };
+            int unitVal = unitsWord switch
+            {
+                "one" => 1,
+                "two" => 2,
+                "three" => 3,
+                "four" => 4,
+                "five" => 5,
+                "six" => 6,
+                "seven" => 7,
+                "eight" => 8,
+                "nine" => 9,
+                _ => 0
+            };
+            var unit = rawUnit.StartsWith("lap") ? "laps" : (rawUnit.StartsWith("hour") || rawUnit.StartsWith("hr") ? "hours" : "minutes");
+            return (tensVal + unitVal, unit);
+        }
+
+        // Check for words like "twenty laps", "fifteen minutes" (avoid matching suffix of hyphenated numbers)
         foreach (var kvp in WordToNumberMap)
         {
-            var wordMatch = Regex.Match(text, $@"\b{kvp.Key}\s+(laps?|minutes?|mins?|hours?|hrs?)\b", RegexOptions.IgnoreCase);
+            var wordMatch = Regex.Match(text, $@"(?<![-\w]){kvp.Key}\s+(laps?|minutes?|mins?|hours?|hrs?)\b", RegexOptions.IgnoreCase);
             if (wordMatch.Success)
             {
                 var rawUnit = wordMatch.Groups[1].Value.ToLowerInvariant();
@@ -255,3 +292,4 @@ public static class CrewChiefPhraseHelper
         return null;
     }
 }
+

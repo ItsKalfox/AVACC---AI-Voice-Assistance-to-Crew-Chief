@@ -46,10 +46,18 @@ public class CommandEditorViewModel : ObservableObject
     private string _testResultConfidence = string.Empty;
     private string _testResultReason = string.Empty;
     private bool _isTesting;
+    private bool _isInternalUpdate;
+    private string _activeCommandsCountText = string.Empty;
 
     public ObservableCollection<CommandDefinition> Commands => _commands;
     public ICollectionView CommandsView => _commandsView;
     public ObservableCollection<string> Categories { get; } = new() { "All", "Fuel", "Tyres", "Brakes", "Powertrain", "Damage", "Timing", "Gaps", "Session", "Pitstop", "Comms", "Display", "Opponents", "Rally", "General" };
+
+    public string ActiveCommandsCountText
+    {
+        get => _activeCommandsCountText;
+        set => SetProperty(ref _activeCommandsCountText, value);
+    }
 
     public CommandDefinition? SelectedCommand
     {
@@ -140,6 +148,9 @@ public class CommandEditorViewModel : ObservableObject
     public RelayCommand ExportCsvTemplateCommand { get; }
     public AsyncRelayCommand ConfirmImportCommand { get; }
     public RelayCommand CancelImportCommand { get; }
+    public AsyncRelayCommand EnableAllCommand { get; }
+    public AsyncRelayCommand DisableAllCommand { get; }
+    public AsyncRelayCommand DisableRallyCommand { get; }
 
     public CommandEditorViewModel(
         ICommandRegistryService registryService,
@@ -171,23 +182,142 @@ public class CommandEditorViewModel : ObservableObject
             StagedImportCommands.Clear();
             IsImportingCsv = false;
         });
+        EnableAllCommand = new AsyncRelayCommand(EnableAllAsync);
+        DisableAllCommand = new AsyncRelayCommand(DisableAllAsync);
+        DisableRallyCommand = new AsyncRelayCommand(DisableRallyAsync);
 
-        _registryService.CommandsChanged += (s, e) => LoadCommands();
+        _registryService.CommandsChanged += (s, e) =>
+        {
+            if (_isInternalUpdate) return;
+            LoadCommands();
+        };
         LoadCommands();
     }
 
     private void LoadCommands()
     {
+        foreach (var cmd in _commands)
+        {
+            cmd.PropertyChanged -= OnCommandPropertyChanged;
+        }
+
         _commands.Clear();
         foreach (var cmd in _registryService.Commands)
         {
+            cmd.PropertyChanged += OnCommandPropertyChanged;
             _commands.Add(cmd);
         }
         _commandsView.Refresh();
+        UpdateCommandStats();
 
         if (SelectedCommand == null && _commands.Count > 0)
         {
             SelectedCommand = _commands[0];
+        }
+    }
+
+    private void UpdateCommandStats()
+    {
+        var total = _commands.Count;
+        var active = _commands.Count(c => c.IsEnabled);
+        var estimatedTokens = active * 22;
+        ActiveCommandsCountText = $"{active} of {total} active (~{estimatedTokens:N0} prompt tokens)";
+    }
+
+    private async void OnCommandPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not CommandDefinition cmd) return;
+        if (e.PropertyName == nameof(CommandDefinition.IsEnabled))
+        {
+            UpdateCommandStats();
+            try
+            {
+                _isInternalUpdate = true;
+                await _registryService.UpdateCommandAsync(cmd);
+                _eventLogService.LogInfo($"Command '{cmd.Name}' active state set to {cmd.IsEnabled}. Next AI request will reflect this immediately.");
+            }
+            catch (Exception ex)
+            {
+                _eventLogService.LogError($"Failed to update command '{cmd.Name}' status: {ex.Message}");
+            }
+            finally
+            {
+                _isInternalUpdate = false;
+            }
+        }
+    }
+
+    private async Task EnableAllAsync()
+    {
+        _isInternalUpdate = true;
+        try
+        {
+            foreach (var cmd in _commands)
+            {
+                cmd.IsEnabled = true;
+            }
+            await _registryService.SaveCommandsAsync(_commands);
+            UpdateCommandStats();
+            _eventLogService.LogInfo($"All {_commands.Count} commands enabled.");
+        }
+        catch (Exception ex)
+        {
+            _eventLogService.LogError($"Failed to enable all commands: {ex.Message}");
+        }
+        finally
+        {
+            _isInternalUpdate = false;
+        }
+    }
+
+    private async Task DisableAllAsync()
+    {
+        _isInternalUpdate = true;
+        try
+        {
+            foreach (var cmd in _commands)
+            {
+                cmd.IsEnabled = false;
+            }
+            await _registryService.SaveCommandsAsync(_commands);
+            UpdateCommandStats();
+            _eventLogService.LogInfo("All commands disabled. AI prompt will be minimal.");
+        }
+        catch (Exception ex)
+        {
+            _eventLogService.LogError($"Failed to disable all commands: {ex.Message}");
+        }
+        finally
+        {
+            _isInternalUpdate = false;
+        }
+    }
+
+    private async Task DisableRallyAsync()
+    {
+        _isInternalUpdate = true;
+        try
+        {
+            int count = 0;
+            foreach (var cmd in _commands)
+            {
+                if (string.Equals(cmd.Category, "Rally", StringComparison.OrdinalIgnoreCase))
+                {
+                    cmd.IsEnabled = false;
+                    count++;
+                }
+            }
+            await _registryService.SaveCommandsAsync(_commands);
+            UpdateCommandStats();
+            _eventLogService.LogInfo($"Disabled {count} Rally commands to reduce prompt tokens.");
+        }
+        catch (Exception ex)
+        {
+            _eventLogService.LogError($"Failed to disable Rally commands: {ex.Message}");
+        }
+        finally
+        {
+            _isInternalUpdate = false;
         }
     }
 
