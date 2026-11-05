@@ -15,6 +15,7 @@ public class SettingsViewModel : ObservableObject
     private readonly IEventLogService _eventLogService;
     private readonly ICrewChiefBridgeService _crewChiefBridge;
     private readonly ICrewChiefMonitorService _crewChiefMonitor;
+    private readonly ICommandRegistryService _registryService;
 
     // Architecture
     private bool _isSimpleMode = true;
@@ -308,6 +309,19 @@ public class SettingsViewModel : ObservableObject
         set => SetProperty(ref _isTestingBridge, value);
     }
 
+    public string TestAudioBridgeButtonText
+    {
+        get
+        {
+            var phrase = _crewChiefBridge.GetCanonicalPhrase("RADIO_CHECK");
+            if (string.IsNullOrWhiteSpace(phrase))
+            {
+                phrase = "can you hear me";
+            }
+            return $"Test Audio Bridge (Play '{phrase}')";
+        }
+    }
+
     // Commands
     public AsyncRelayCommand SaveApiKeyCommand { get; }
     public AsyncRelayCommand RemoveApiKeyCommand { get; }
@@ -325,7 +339,8 @@ public class SettingsViewModel : ObservableObject
         IAudioCaptureService audioCaptureService,
         IEventLogService eventLogService,
         ICrewChiefBridgeService crewChiefBridge,
-        ICrewChiefMonitorService crewChiefMonitor)
+        ICrewChiefMonitorService crewChiefMonitor,
+        ICommandRegistryService registryService)
     {
         _settingsService = settingsService;
         _secureKeyStorage = secureKeyStorage;
@@ -334,6 +349,12 @@ public class SettingsViewModel : ObservableObject
         _eventLogService = eventLogService;
         _crewChiefBridge = crewChiefBridge;
         _crewChiefMonitor = crewChiefMonitor;
+        _registryService = registryService;
+
+        _registryService.CommandsChanged += (s, e) =>
+        {
+            OnPropertyChanged(nameof(TestAudioBridgeButtonText));
+        };
 
         SaveApiKeyCommand = new AsyncRelayCommand(SaveApiKeyAsync);
         RemoveApiKeyCommand = new AsyncRelayCommand(RemoveApiKeyAsync);
@@ -546,16 +567,22 @@ public class SettingsViewModel : ObservableObject
     private async Task TestCrewChiefBridgeAsync()
     {
         IsTestingBridge = true;
-        CrewChiefTestStatus = "Playing test phrase 'radio check' through selected audio device...";
-        _eventLogService.LogInfo($"Testing Crew Chief TTS bridge on device: {SelectedPlaybackDevice?.Name ?? "Default"}");
+        var phrase = _crewChiefBridge.GetCanonicalPhrase("RADIO_CHECK");
+        if (string.IsNullOrWhiteSpace(phrase))
+        {
+            phrase = "can you hear me";
+        }
+
+        CrewChiefTestStatus = $"Playing test phrase '{phrase}' through selected audio device...";
+        _eventLogService.LogInfo($"Testing Crew Chief TTS bridge on device: {SelectedPlaybackDevice?.Name ?? "Default"} with phrase: '{phrase}'");
 
         try
         {
-            var success = await _crewChiefBridge.SpeakPhraseAsync("radio check");
+            var success = await _crewChiefBridge.SpeakPhraseAsync(phrase);
             if (success)
             {
-                CrewChiefTestStatus = "Test audio successfully played to device!";
-                _eventLogService.LogInfo("Crew Chief audio bridge test succeeded. Trigger phrase 'radio check' synthesized.");
+                CrewChiefTestStatus = $"Test audio successfully played to device! (Phrase: \"{phrase}\")";
+                _eventLogService.LogInfo($"Crew Chief audio bridge test succeeded. Trigger phrase '{phrase}' synthesized.");
             }
             else
             {

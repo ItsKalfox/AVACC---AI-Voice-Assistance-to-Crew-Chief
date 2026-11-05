@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Customizable Voice Line Field for Crew Chief Bridge:**
+  - Added `VoiceLine` field to `CommandDefinition`, enabling users to inspect and override the exact verbal phrase sent via TTS into Crew Chief for every command.
+  - Added "Voice Line (exact verbal phrase spoken to Crew Chief)" text input to the Command Editor panel and a dedicated column in the Command Registry table.
+  - Added `VoiceLine` support to CSV Import & Staging table, as well as the CSV template generator.
+  - Connected the Settings "Test Audio Bridge" button dynamically to `RADIO_CHECK`'s configured voice line (`"can you hear me"` by default).
 - **Crew Chief Process Monitor & Auto-Launch (`ICrewChiefMonitorService`):**
   - Real-time polling service detecting `CrewChiefV4.exe` execution state (`Running`, `Active`, or `Offline`).
   - Added a status badge in the top navigation header with live indicator light and a one-click "Launch" button to start Crew Chief if it is offline.

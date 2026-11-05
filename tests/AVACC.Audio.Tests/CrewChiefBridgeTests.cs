@@ -19,7 +19,8 @@ public class CrewChiefBridgeTests
 
     private class FakeCommandRegistryService : ICommandRegistryService
     {
-        public IReadOnlyList<CommandDefinition> Commands => new List<CommandDefinition>();
+        public List<CommandDefinition> CommandsList { get; } = new();
+        public IReadOnlyList<CommandDefinition> Commands => CommandsList;
         public event EventHandler? CommandsChanged;
         public Task<IReadOnlyList<CommandDefinition>> LoadCommandsAsync() => Task.FromResult(Commands);
         public Task SaveCommandsAsync(IEnumerable<CommandDefinition> commands) => Task.CompletedTask;
@@ -54,7 +55,7 @@ public class CrewChiefBridgeTests
     [InlineData("HOWS_MY_AERO", "how's my aero")]
     [InlineData("DAMAGE_REPORT", "damage report")]
     [InlineData("WHATS_MY_FUEL_LEVEL", "what's my fuel level")]
-    [InlineData("RADIO_CHECK", "radio check")]
+    [InlineData("RADIO_CHECK", "can you hear me")]
     [InlineData("PIT_STOP", "pit stop")]
     [InlineData("WHATS_MY_GAP_BEHIND", "what's the gap behind")]
     public void GetCanonicalPhrase_ReturnsAccurateCrewChiefPhrases(string commandId, string expectedPhrase)
@@ -63,6 +64,23 @@ public class CrewChiefBridgeTests
         var phrase = bridge.GetCanonicalPhrase(commandId);
 
         Assert.Equal(expectedPhrase, phrase);
+    }
+
+    [Fact]
+    public void GetCanonicalPhrase_PrefersCustomVoiceLine_WhenDefinedInRegistry()
+    {
+        var registry = new FakeCommandRegistryService();
+        registry.CommandsList.Add(new CommandDefinition
+        {
+            CrewChiefCommandId = "RADIO_CHECK",
+            Name = "Radio Check",
+            VoiceLine = "test mic check chief"
+        });
+
+        var bridge = new CrewChiefBridgeService(_settings, registry, _log, _micManager);
+        var phrase = bridge.GetCanonicalPhrase("RADIO_CHECK");
+
+        Assert.Equal("test mic check chief", phrase);
     }
 
     [Fact]

@@ -18,6 +18,7 @@ public class CommandEditorViewModel : ObservableObject
     private readonly IAIProviderFactory? _providerFactory;
     private readonly IEventLogService _eventLogService;
     private readonly ISettingsService _settingsService;
+    private readonly ICrewChiefBridgeService? _crewChiefBridge;
 
     private readonly ObservableCollection<CommandDefinition> _commands = new();
     private readonly ICollectionView _commandsView;
@@ -32,6 +33,7 @@ public class CommandEditorViewModel : ObservableObject
     private string _editCategory = "General";
     private string _editDescription = string.Empty;
     private bool _editIsEnabled = true;
+    private string _editVoiceLine = string.Empty;
     private string _editExamplesText = string.Empty;
     private string _editAliasesText = string.Empty;
     private bool _isEditing;
@@ -94,6 +96,7 @@ public class CommandEditorViewModel : ObservableObject
     public string EditCategory { get => _editCategory; set => SetProperty(ref _editCategory, value); }
     public string EditDescription { get => _editDescription; set => SetProperty(ref _editDescription, value); }
     public bool EditIsEnabled { get => _editIsEnabled; set => SetProperty(ref _editIsEnabled, value); }
+    public string EditVoiceLine { get => _editVoiceLine; set => SetProperty(ref _editVoiceLine, value); }
     public string EditExamplesText { get => _editExamplesText; set => SetProperty(ref _editExamplesText, value); }
     public string EditAliasesText { get => _editAliasesText; set => SetProperty(ref _editAliasesText, value); }
     public bool IsEditing { get => _isEditing; set => SetProperty(ref _isEditing, value); }
@@ -142,12 +145,14 @@ public class CommandEditorViewModel : ObservableObject
         ICommandRegistryService registryService,
         IEventLogService eventLogService,
         ISettingsService settingsService,
-        IAIProviderFactory? providerFactory = null)
+        IAIProviderFactory? providerFactory = null,
+        ICrewChiefBridgeService? crewChiefBridge = null)
     {
         _registryService = registryService;
         _eventLogService = eventLogService;
         _settingsService = settingsService;
         _providerFactory = providerFactory;
+        _crewChiefBridge = crewChiefBridge;
 
         _commandsView = CollectionViewSource.GetDefaultView(_commands);
         _commandsView.Filter = FilterCommands;
@@ -211,6 +216,9 @@ public class CommandEditorViewModel : ObservableObject
         EditCategory = cmd.Category;
         EditDescription = cmd.Description;
         EditIsEnabled = cmd.IsEnabled;
+        EditVoiceLine = !string.IsNullOrWhiteSpace(cmd.VoiceLine) 
+            ? cmd.VoiceLine 
+            : (_crewChiefBridge != null ? _crewChiefBridge.GetCanonicalPhrase(cmd.CrewChiefCommandId) : string.Empty);
         EditExamplesText = string.Join(Environment.NewLine, cmd.Examples);
         EditAliasesText = string.Join(", ", cmd.Aliases);
         _isNewCommand = false;
@@ -228,6 +236,7 @@ public class CommandEditorViewModel : ObservableObject
         EditCategory = "General";
         EditDescription = "Description of command.";
         EditIsEnabled = true;
+        EditVoiceLine = "";
         EditExamplesText = "Example phrase 1\nExample phrase 2";
         EditAliasesText = "";
         _isNewCommand = true;
@@ -258,6 +267,7 @@ public class CommandEditorViewModel : ObservableObject
             Category = EditCategory.Trim(),
             Description = EditDescription.Trim(),
             IsEnabled = EditIsEnabled,
+            VoiceLine = string.IsNullOrWhiteSpace(EditVoiceLine) ? null : EditVoiceLine.Trim(),
             Examples = examples,
             Aliases = aliases
         };
@@ -342,13 +352,22 @@ public class CommandEditorViewModel : ObservableObject
 
                 StagedImportCommands.Clear();
                 int startIndex = 0;
-                var firstLineCols = ParseCsvLine(lines[0]);
+                var headerCols = ParseCsvLine(lines[0]);
+                int nameIdx = 0, idIdx = 1, catIdx = 2, descIdx = 3, voiceIdx = -1, exIdx = 4, alIdx = 5, activeIdx = 6;
+                bool hasHeader = false;
 
-                bool hasHeader = firstLineCols.Any(c => 
-                    c.Equals("Name", StringComparison.OrdinalIgnoreCase) ||
-                    c.Equals("CommandId", StringComparison.OrdinalIgnoreCase) ||
-                    c.Equals("CrewChiefCommandId", StringComparison.OrdinalIgnoreCase) ||
-                    c.Equals("Category", StringComparison.OrdinalIgnoreCase));
+                for (int c = 0; c < headerCols.Count; c++)
+                {
+                    var colName = headerCols[c].Trim().ToLowerInvariant().Replace(" ", "").Replace("_", "");
+                    if (colName == "name" || colName == "displayname") { nameIdx = c; hasHeader = true; }
+                    else if (colName == "crewchiefcommandid" || colName == "commandid" || colName == "id") { idIdx = c; hasHeader = true; }
+                    else if (colName == "category") { catIdx = c; hasHeader = true; }
+                    else if (colName == "description" || colName == "desc") { descIdx = c; hasHeader = true; }
+                    else if (colName == "voiceline" || colName == "triggerphrase" || colName == "phrase") { voiceIdx = c; hasHeader = true; }
+                    else if (colName == "examples" || colName == "examplesraw" || colName == "samples") { exIdx = c; hasHeader = true; }
+                    else if (colName == "aliases" || colName == "aliasesraw") { alIdx = c; hasHeader = true; }
+                    else if (colName == "isenabled" || colName == "active" || colName == "enabled") { activeIdx = c; hasHeader = true; }
+                }
 
                 if (hasHeader)
                 {
@@ -363,16 +382,19 @@ public class CommandEditorViewModel : ObservableObject
                     var cols = ParseCsvLine(line);
                     if (cols.Count == 0) continue;
 
+                    string GetCol(int idx) => idx >= 0 && idx < cols.Count ? cols[idx].Trim() : string.Empty;
+
                     var staged = new StagedCommandModel
                     {
                         IsSelected = true,
-                        Name = cols.Count > 0 ? cols[0] : "",
-                        CrewChiefCommandId = cols.Count > 1 ? cols[1].Trim().ToUpperInvariant() : "",
-                        Category = cols.Count > 2 && !string.IsNullOrWhiteSpace(cols[2]) ? cols[2].Trim() : "General",
-                        Description = cols.Count > 3 ? cols[3] : "",
-                        ExamplesRaw = cols.Count > 4 ? cols[4] : "",
-                        AliasesRaw = cols.Count > 5 ? cols[5] : "",
-                        IsEnabled = cols.Count <= 6 || !bool.TryParse(cols[6], out var active) || active
+                        Name = GetCol(nameIdx),
+                        CrewChiefCommandId = GetCol(idIdx).ToUpperInvariant(),
+                        Category = !string.IsNullOrWhiteSpace(GetCol(catIdx)) ? GetCol(catIdx) : "General",
+                        Description = GetCol(descIdx),
+                        VoiceLine = voiceIdx >= 0 ? GetCol(voiceIdx) : "",
+                        ExamplesRaw = GetCol(exIdx),
+                        AliasesRaw = GetCol(alIdx),
+                        IsEnabled = activeIdx < 0 || activeIdx >= cols.Count || !bool.TryParse(cols[activeIdx], out var active) || active
                     };
 
                     if (!string.IsNullOrWhiteSpace(staged.CrewChiefCommandId) || !string.IsNullOrWhiteSpace(staged.Name))
@@ -413,10 +435,11 @@ public class CommandEditorViewModel : ObservableObject
             try
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("Name,CrewChiefCommandId,Category,Description,Examples,Aliases,IsEnabled");
-                sb.AppendLine("\"Pit Stop Confirmation\",\"BOX_THIS_LAP\",\"Pitstop\",\"Inform crew chief you are pitting on the current lap\",\"box this lap;coming into pits;pitting now\",\"box box;pit now\",True");
-                sb.AppendLine("\"Fuel Remaining Check\",\"HOW_MUCH_FUEL_REMAINING\",\"Fuel\",\"Ask crew chief for remaining fuel\",\"how much fuel do I have;fuel remaining;fuel check\",\"fuel status\",True");
-                sb.AppendLine("\"Brake Temperature Check\",\"HOW_ARE_MY_BRAKES\",\"Brakes\",\"Check brake temperatures and wear\",\"how are the brakes;brake temp check;check brakes\",\"brake status\",True");
+                sb.AppendLine("Name,CrewChiefCommandId,Category,Description,VoiceLine,Examples,Aliases,IsEnabled");
+                sb.AppendLine("\"Radio Check\",\"RADIO_CHECK\",\"General\",\"Check radio communication with Crew Chief\",\"can you hear me\",\"can you hear me;radio check;mic check\",\"radio test\",True");
+                sb.AppendLine("\"Pit Stop Confirmation\",\"BOX_THIS_LAP\",\"Pitstop\",\"Inform crew chief you are pitting on the current lap\",\"box this lap\",\"box this lap;coming into pits;pitting now\",\"box box;pit now\",True");
+                sb.AppendLine("\"Fuel Remaining Check\",\"HOW_MUCH_FUEL_REMAINING\",\"Fuel\",\"Ask crew chief for remaining fuel\",\"how much fuel to the end\",\"how much fuel do I have;fuel remaining;fuel check\",\"fuel status\",True");
+                sb.AppendLine("\"Brake Temperature Check\",\"HOW_ARE_MY_BRAKES\",\"Brakes\",\"Check brake temperatures and wear\",\"how are my brakes\",\"how are the brakes;brake temp check;check brakes\",\"brake status\",True");
 
                 System.IO.File.WriteAllText(dialog.FileName, sb.ToString(), Encoding.UTF8);
                 _eventLogService.LogInfo($"CSV template saved to {dialog.FileName}");
@@ -461,6 +484,7 @@ public class CommandEditorViewModel : ObservableObject
                 CrewChiefCommandId = item.CrewChiefCommandId.Trim().ToUpperInvariant(),
                 Category = string.IsNullOrWhiteSpace(item.Category) ? "General" : item.Category.Trim(),
                 Description = item.Description.Trim(),
+                VoiceLine = string.IsNullOrWhiteSpace(item.VoiceLine) ? null : item.VoiceLine.Trim(),
                 Examples = examples,
                 Aliases = aliases,
                 IsEnabled = item.IsEnabled

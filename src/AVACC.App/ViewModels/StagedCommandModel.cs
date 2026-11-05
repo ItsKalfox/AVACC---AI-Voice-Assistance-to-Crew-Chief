@@ -11,6 +11,7 @@ public class StagedCommandModel : ObservableObject
     private string _description = string.Empty;
     private string _examplesRaw = string.Empty;
     private string _aliasesRaw = string.Empty;
+    private string _voiceLine = string.Empty;
     private bool _isEnabled = true;
 
     public bool IsSelected
@@ -53,6 +54,12 @@ public class StagedCommandModel : ObservableObject
     {
         get => _aliasesRaw;
         set => SetProperty(ref _aliasesRaw, value);
+    }
+
+    public string VoiceLine
+    {
+        get => _voiceLine;
+        set => SetProperty(ref _voiceLine, value);
     }
 
     public bool IsEnabled

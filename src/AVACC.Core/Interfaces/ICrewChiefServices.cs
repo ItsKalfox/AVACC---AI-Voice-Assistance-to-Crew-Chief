@@ -30,3 +30,4 @@ public interface ICrewChiefBridgeService
     string GetCanonicalPhrase(string commandId);
     IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices();
 }
+

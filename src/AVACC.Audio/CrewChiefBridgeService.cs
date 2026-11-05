@@ -171,7 +171,7 @@ public class CrewChiefBridgeService : ICrewChiefBridgeService
         ["DISABLE_MANUAL_FORMATION_LAP"] = "standing start",
 
         // Radio & Comms
-        ["RADIO_CHECK"] = "radio check",
+        ["RADIO_CHECK"] = "can you hear me",
         ["REPEAT_LAST_MESSAGE"] = "repeat last message",
         ["MORE_INFO"] = "tell me more",
         ["I_AM_OK"] = "I'm OK",
@@ -225,19 +225,27 @@ public class CrewChiefBridgeService : ICrewChiefBridgeService
         if (string.IsNullOrWhiteSpace(commandId)) return string.Empty;
 
         var cleanId = commandId.Trim().ToUpperInvariant();
+
+        // 1. Check user-configured CommandDefinition in registry first (allows custom voice lines)
+        var def = _registryService.Commands.FirstOrDefault(c => string.Equals(c.CrewChiefCommandId, cleanId, StringComparison.OrdinalIgnoreCase));
+        if (def != null && !string.IsNullOrWhiteSpace(def.VoiceLine))
+        {
+            return def.VoiceLine.Trim();
+        }
+
+        // 2. Check built-in verified canonical trigger phrases
         if (CanonicalPhrases.TryGetValue(cleanId, out var phrase))
         {
             return phrase;
         }
 
-        // Try to find the first example in registered command definitions
-        var def = _registryService.Commands.FirstOrDefault(c => string.Equals(c.CrewChiefCommandId, cleanId, StringComparison.OrdinalIgnoreCase));
+        // 3. Fallback: try first natural language example from definition
         if (def != null && def.Examples.Count > 0 && !string.IsNullOrWhiteSpace(def.Examples[0]))
         {
             return def.Examples[0];
         }
 
-        // Fallback: convert SCREAMING_SNAKE_CASE to readable lower case words
+        // 4. Final fallback: convert SCREAMING_SNAKE_CASE to readable lower case words
         return cleanId.Replace('_', ' ').ToLowerInvariant();
     }
 

@@ -193,7 +193,7 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Content="Test Audio Bridge (Play 'radio check')" Command="{Binding TestCrewChiefBridgeCommand}" 
+                            <Button Grid.Column="0" Content="{Binding TestAudioBridgeButtonText, FallbackValue='Test Audio Bridge (Play \'can you hear me\')'}" Command="{Binding TestCrewChiefBridgeCommand}" 
                                     Style="{StaticResource ModernButtonStyle}" Margin="0,0,10,0" />
                             <TextBlock Grid.Column="1" Text="{Binding CrewChiefTestStatus}" VerticalAlignment="Center" FontSize="10" 
                                        Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
