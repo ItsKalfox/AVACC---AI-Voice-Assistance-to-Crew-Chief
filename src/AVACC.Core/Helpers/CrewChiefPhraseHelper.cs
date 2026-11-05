@@ -105,54 +105,65 @@ public static class CrewChiefPhraseHelper
 
     public static string ResolvePhrase(string? commandId, string? spokenPhrase, string transcript, string? voiceLineTemplate)
     {
-        // 1. If an explicit spoken phrase was returned by LLM, ensure numbers are words if applicable
-        if (!string.IsNullOrWhiteSpace(spokenPhrase) && !spokenPhrase.Contains('{'))
+        // 1. If an explicit configured voice line template is available, it ALWAYS takes precedence
+        if (!string.IsNullOrWhiteSpace(voiceLineTemplate))
+        {
+            var template = voiceLineTemplate.Trim();
+
+            // If template contains dynamic parameters, extract and resolve them
+            if (template.Contains('{'))
+            {
+                var result = template;
+
+                // Check for position query templates: {number}
+                if (result.Contains("{number}", StringComparison.OrdinalIgnoreCase))
+                {
+                    var positionNum = ExtractPositionNumber(transcript) ?? ExtractPositionNumber(spokenPhrase ?? "");
+                    var numWord = positionNum.HasValue ? NumberToWord(positionNum.Value) : "one";
+                    result = Regex.Replace(result, @"\{number\}", numWord, RegexOptions.IgnoreCase);
+                }
+
+                // Check for fuel calculation templates: {amount} {unit}
+                if (result.Contains("{amount}", StringComparison.OrdinalIgnoreCase))
+                {
+                    var (amount, unit) = ExtractFuelCalculationParameters(transcript);
+                    if (!amount.HasValue && !string.IsNullOrWhiteSpace(spokenPhrase))
+                    {
+                        (amount, unit) = ExtractFuelCalculationParameters(spokenPhrase);
+                    }
+                    var amountWord = amount.HasValue ? NumberToWord(amount.Value) : "twenty";
+                    result = Regex.Replace(result, @"\{amount\}", amountWord, RegexOptions.IgnoreCase);
+                    result = Regex.Replace(result, @"\{unit\}", unit ?? "laps", RegexOptions.IgnoreCase);
+                }
+
+                // Check for named driver templates: {driver}
+                if (result.Contains("{driver}", StringComparison.OrdinalIgnoreCase))
+                {
+                    var driverName = ExtractDriverName(transcript) ?? ExtractDriverName(spokenPhrase ?? "") ?? "leader";
+                    result = Regex.Replace(result, @"\{driver\}", driverName, RegexOptions.IgnoreCase);
+                }
+
+                // Check for time / alarm templates: {time}
+                if (result.Contains("{time}", StringComparison.OrdinalIgnoreCase))
+                {
+                    var timeSpec = ExtractTimeSpecification(transcript) ?? ExtractTimeSpecification(spokenPhrase ?? "") ?? "ten minutes";
+                    result = Regex.Replace(result, @"\{time\}", timeSpec, RegexOptions.IgnoreCase);
+                }
+
+                return FormatDigitsToWords(result);
+            }
+
+            // Static voice line configured by user or registry (guarantee exact canonical phrase)
+            return FormatDigitsToWords(template);
+        }
+
+        // 2. If no voice line template is configured, fallback to LLM's spoken phrase or canonical ID
+        if (!string.IsNullOrWhiteSpace(spokenPhrase))
         {
             return FormatDigitsToWords(spokenPhrase.Trim());
         }
 
-        // 2. If no voice line template is provided, fallback to spokenPhrase or commandId
-        if (string.IsNullOrWhiteSpace(voiceLineTemplate))
-        {
-            return !string.IsNullOrWhiteSpace(spokenPhrase)
-                ? FormatDigitsToWords(spokenPhrase.Trim())
-                : (commandId ?? string.Empty).Replace('_', ' ').ToLowerInvariant();
-        }
-
-        var result = voiceLineTemplate.Trim();
-
-        // Check for position query templates: {number}
-        if (result.Contains("{number}", StringComparison.OrdinalIgnoreCase))
-        {
-            var positionNum = ExtractPositionNumber(transcript);
-            var numWord = positionNum.HasValue ? NumberToWord(positionNum.Value) : "one";
-            result = Regex.Replace(result, @"\{number\}", numWord, RegexOptions.IgnoreCase);
-        }
-
-        // Check for fuel calculation templates: {amount} {unit}
-        if (result.Contains("{amount}", StringComparison.OrdinalIgnoreCase))
-        {
-            var (amount, unit) = ExtractFuelCalculationParameters(transcript);
-            var amountWord = amount.HasValue ? NumberToWord(amount.Value) : "twenty";
-            result = Regex.Replace(result, @"\{amount\}", amountWord, RegexOptions.IgnoreCase);
-            result = Regex.Replace(result, @"\{unit\}", unit ?? "laps", RegexOptions.IgnoreCase);
-        }
-
-        // Check for named driver templates: {driver}
-        if (result.Contains("{driver}", StringComparison.OrdinalIgnoreCase))
-        {
-            var driverName = ExtractDriverName(transcript) ?? "leader";
-            result = Regex.Replace(result, @"\{driver\}", driverName, RegexOptions.IgnoreCase);
-        }
-
-        // Check for time / alarm templates: {time}
-        if (result.Contains("{time}", StringComparison.OrdinalIgnoreCase))
-        {
-            var timeSpec = ExtractTimeSpecification(transcript) ?? "ten minutes";
-            result = Regex.Replace(result, @"\{time\}", timeSpec, RegexOptions.IgnoreCase);
-        }
-
-        return FormatDigitsToWords(result);
+        return (commandId ?? string.Empty).Replace('_', ' ').ToLowerInvariant();
     }
 
     public static int? ExtractPositionNumber(string text)

@@ -106,5 +106,26 @@ public class CrewChiefPhraseHelperTests
         var resolved = CrewChiefPhraseHelper.ResolvePhrase("WHATS_POSITION_LAST_LAP", llmSpokenPhrase, transcript, template);
         Assert.Equal("what's position four's last lap", resolved);
     }
+
+    [Fact]
+    public void ResolvePhrase_PreservesStaticVoiceLine_EvenWhenLlmReturnsDifferentSpokenPhrase()
+    {
+        var template = "don't talk in the corners";
+        var transcript = "no messages in the braking";
+        var llmSpokenPhrase = "no breaking under cornering";
+
+        var resolved = CrewChiefPhraseHelper.ResolvePhrase("DONT_TALK_IN_THE_CORNERS", llmSpokenPhrase, transcript, template);
+        Assert.Equal("don't talk in the corners", resolved);
+    }
+
+    [Fact]
+    public void ResolvePhrase_FallsBackToLlmSpokenPhrase_OnlyWhenNoTemplateConfigured()
+    {
+        var transcript = "give me corner silence";
+        var llmSpokenPhrase = "don't talk in the corners";
+
+        var resolved = CrewChiefPhraseHelper.ResolvePhrase("DONT_TALK_IN_THE_CORNERS", llmSpokenPhrase, transcript, null);
+        Assert.Equal("don't talk in the corners", resolved);
+    }
 }
 

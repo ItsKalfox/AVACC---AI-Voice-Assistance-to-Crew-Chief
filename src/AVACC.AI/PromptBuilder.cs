@@ -37,7 +37,8 @@ public static class PromptBuilder
         {
             foreach (var cmd in availableCommands.Where(c => c.IsEnabled))
             {
-                sb.AppendLine($"- {cmd.CrewChiefCommandId}: {cmd.Description}");
+                var voiceHint = !string.IsNullOrWhiteSpace(cmd.VoiceLine) ? $" (VoiceLine: \"{cmd.VoiceLine}\")" : "";
+                sb.AppendLine($"- {cmd.CrewChiefCommandId}{voiceHint}: {cmd.Description}");
             }
         }
         else
@@ -48,6 +49,10 @@ public static class PromptBuilder
                 sb.AppendLine($"  Name: {cmd.Name}");
                 sb.AppendLine($"  Category: {cmd.Category}");
                 sb.AppendLine($"  Description: {cmd.Description}");
+                if (!string.IsNullOrWhiteSpace(cmd.VoiceLine))
+                {
+                    sb.AppendLine($"  VoiceLine: {cmd.VoiceLine}");
+                }
                 if (cmd.Examples.Count > 0)
                 {
                     sb.AppendLine($"  Examples: {string.Join(" | ", cmd.Examples)}");
@@ -156,12 +161,16 @@ public static class PromptBuilder
                 {
                     result.CommandId = matchingCommand.CrewChiefCommandId;
 
+                    var voiceLine = !string.IsNullOrWhiteSpace(matchingCommand.VoiceLine)
+                        ? matchingCommand.VoiceLine
+                        : matchingCommand.Examples.FirstOrDefault();
+
                     // Resolve exact verbal phrase using LLM response, dynamic parameters, or configured VoiceLine
                     result.SpokenPhrase = CrewChiefPhraseHelper.ResolvePhrase(
                         result.CommandId,
                         result.SpokenPhrase,
                         result.Transcript,
-                        matchingCommand.VoiceLine);
+                        voiceLine);
                 }
                 else
                 {

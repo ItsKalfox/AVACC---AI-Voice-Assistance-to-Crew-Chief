@@ -17,3 +17,4 @@ public interface ISoundEffectService
     /// </summary>
     void PlaySound(string soundName, float? volumeOverride = null, string? deviceIdOverride = null);
 }
+
