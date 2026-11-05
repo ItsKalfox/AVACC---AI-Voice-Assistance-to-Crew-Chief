@@ -225,7 +225,7 @@
                                         BorderBrush="{StaticResource AccentCyanBrush}" />
                                 <Button Command="{Binding ResetPttKeyToDefaultCommand}"
                                         Content="Reset"
-                                        Style="{StaticResource OutlineButtonStyle}"
+                                        Style="{StaticResource ModernButtonStyle}"
                                         Height="28" Padding="8,0" FontSize="11" Margin="0,0,8,4" />
                                 <TextBox Text="{Binding PttKey, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CodeBoxStyle}" Width="90" Height="28" VerticalAlignment="Center" Margin="0,0,0,4" ToolTip="Manual key name or VK code (e.g. PageUp, RightCtrl, V)" />
                             </WrapPanel>
@@ -256,7 +256,7 @@
                         <!-- PTT Sound Effects Section -->
                         <Border BorderBrush="#1F232B" BorderThickness="0,1,0,0" Padding="0,10,0,0">
                             <StackPanel>
-                                <TextBlock Text="PTT SOUND CUE EFFECTS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentCyanBrush}" Margin="0,0,0,8" />
+                                <TextBlock Text="AUDIO CUES &amp; SOUND FEEDBACK" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentCyanBrush}" Margin="0,0,0,8" />
                                 
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
@@ -282,7 +282,7 @@
                                 </Grid>
 
                                 <!-- Volume Slider & Test Buttons -->
-                                <Grid Margin="0,0,0,2">
+                                <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="140" />
                                         <ColumnDefinition Width="*" />
@@ -296,6 +296,34 @@
                                         <Button Content="Test Start" Command="{Binding TestPttStartSoundCommand}" Style="{StaticResource ModernButtonStyle}" Padding="6,2" FontSize="10" Margin="0,0,4,0" ToolTip="Test start_ptt.wav" />
                                         <Button Content="Test End" Command="{Binding TestPttEndSoundCommand}" Style="{StaticResource ModernButtonStyle}" Padding="6,2" FontSize="10" ToolTip="Test end_ptt.wav" />
                                     </StackPanel>
+                                </Grid>
+
+                                <!-- Native "Didn't Understand" Crew Chief Voice Feedback -->
+                                <CheckBox Content="Play native Crew Chief 'Didn't Understand' on unmatched speech" 
+                                          IsChecked="{Binding EnableDidntUnderstandSound}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6" />
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Chief Voice Persona:" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableChiefPersonas}"
+                                              SelectedItem="{Binding SelectedChiefVoicePersona}"
+                                              Height="26" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    <Button Grid.Column="2" Content="Test Voice" Command="{Binding TestDidntUnderstandCommand}" Style="{StaticResource ModernButtonStyle}" Padding="8,2" FontSize="10" ToolTip="Play random didn't understand clip for selected persona" />
+                                </Grid>
+
+                                <!-- AI Model / Network Error Alert Cue -->
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox Grid.Column="0" Content="Play alert sound on AI Model / Network failure" 
+                                              IsChecked="{Binding EnableAiErrorSound}" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Content="Test Error Sound" Command="{Binding TestAiErrorCommand}" Style="{StaticResource ModernButtonStyle}" Padding="8,2" FontSize="10" ToolTip="Test error sound cue" />
                                 </Grid>
                             </StackPanel>
                         </Border>

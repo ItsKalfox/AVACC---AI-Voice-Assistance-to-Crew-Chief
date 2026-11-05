@@ -30,9 +30,12 @@ public class AppSettings
     public bool VoiceActivityDetectionEnabled { get; set; } = false;
     public bool NoiseSuppressionEnabled { get; set; } = false;
 
-    // PTT Sound Effects
+    // PTT Sound Effects & Audio Cues
     public bool EnablePttStartSound { get; set; } = true;
     public bool EnablePttEndSound { get; set; } = true;
+    public bool EnableDidntUnderstandSound { get; set; } = true;
+    public string SelectedChiefVoicePersona { get; set; } = "Auto-Detect";
+    public bool EnableAiErrorSound { get; set; } = true;
     public string? PttSoundOutputDeviceId { get; set; }
     public string? PttSoundOutputDeviceName { get; set; }
     public float PttSoundVolume { get; set; } = 0.8f;

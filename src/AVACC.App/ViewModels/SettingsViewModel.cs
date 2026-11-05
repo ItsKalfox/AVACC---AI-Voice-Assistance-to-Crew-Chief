@@ -66,6 +66,9 @@ public class SettingsViewModel : ObservableObject
     // PTT Sound Effects
     private bool _enablePttStartSound = true;
     private bool _enablePttEndSound = true;
+    private bool _enableDidntUnderstandSound = true;
+    private string _selectedChiefVoicePersona = "Auto-Detect";
+    private bool _enableAiErrorSound = true;
     private AudioDeviceInfo? _selectedPttSoundDevice;
     private float _pttSoundVolume = 0.8f;
 
@@ -311,6 +314,26 @@ public class SettingsViewModel : ObservableObject
         set => PttSoundVolume = Math.Clamp(value / 100f, 0f, 1f);
     }
 
+    public ObservableCollection<string> AvailableChiefPersonas { get; } = new();
+
+    public bool EnableDidntUnderstandSound
+    {
+        get => _enableDidntUnderstandSound;
+        set => SetProperty(ref _enableDidntUnderstandSound, value);
+    }
+
+    public string SelectedChiefVoicePersona
+    {
+        get => _selectedChiefVoicePersona;
+        set => SetProperty(ref _selectedChiefVoicePersona, value);
+    }
+
+    public bool EnableAiErrorSound
+    {
+        get => _enableAiErrorSound;
+        set => SetProperty(ref _enableAiErrorSound, value);
+    }
+
     public AudioDeviceInfo? SelectedAudioDevice
     {
         get => _selectedAudioDevice;
@@ -403,6 +426,8 @@ public class SettingsViewModel : ObservableObject
     public RelayCommand ResetPttKeyToDefaultCommand { get; }
     public RelayCommand TestPttStartSoundCommand { get; }
     public RelayCommand TestPttEndSoundCommand { get; }
+    public RelayCommand TestDidntUnderstandCommand { get; }
+    public RelayCommand TestAiErrorCommand { get; }
 
     public SettingsViewModel(
         ISettingsService settingsService,
@@ -448,6 +473,17 @@ public class SettingsViewModel : ObservableObject
         ResetPttKeyToDefaultCommand = new RelayCommand(ResetPttKeyToDefault);
         TestPttStartSoundCommand = new RelayCommand(() => _soundEffectService?.PlaySound("start_ptt.wav", PttSoundVolume, SelectedPttSoundDevice?.Id));
         TestPttEndSoundCommand = new RelayCommand(() => _soundEffectService?.PlaySound("end_ptt.wav", PttSoundVolume, SelectedPttSoundDevice?.Id));
+        TestDidntUnderstandCommand = new RelayCommand(() => _soundEffectService?.PlayDidntUnderstand());
+        TestAiErrorCommand = new RelayCommand(() => _soundEffectService?.PlayAiError());
+
+        // Initialize available Chief voice personas
+        AvailableChiefPersonas.Clear();
+        var personas = _soundEffectService?.GetAvailableChiefPersonas() ?? new[] { "Auto-Detect", "Jim" };
+        foreach (var persona in personas)
+        {
+            AvailableChiefPersonas.Add(persona);
+        }
+
         SaveApiKeyCommand = new AsyncRelayCommand(SaveApiKeyAsync);
         RemoveApiKeyCommand = new AsyncRelayCommand(RemoveApiKeyAsync);
         TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync);
@@ -482,6 +518,9 @@ public class SettingsViewModel : ObservableObject
 
         EnablePttStartSound = s.EnablePttStartSound;
         EnablePttEndSound = s.EnablePttEndSound;
+        EnableDidntUnderstandSound = s.EnableDidntUnderstandSound;
+        SelectedChiefVoicePersona = string.IsNullOrEmpty(s.SelectedChiefVoicePersona) ? "Auto-Detect" : s.SelectedChiefVoicePersona;
+        EnableAiErrorSound = s.EnableAiErrorSound;
         PttSoundVolume = s.PttSoundVolume;
 
         SampleRate = s.AudioSampleRate;
@@ -760,6 +799,9 @@ public class SettingsViewModel : ObservableObject
         // PTT Sound Effects
         s.EnablePttStartSound = EnablePttStartSound;
         s.EnablePttEndSound = EnablePttEndSound;
+        s.EnableDidntUnderstandSound = EnableDidntUnderstandSound;
+        s.SelectedChiefVoicePersona = SelectedChiefVoicePersona;
+        s.EnableAiErrorSound = EnableAiErrorSound;
         s.PttSoundVolume = PttSoundVolume;
         s.PttSoundOutputDeviceId = SelectedPttSoundDevice?.Id;
         s.PttSoundOutputDeviceName = SelectedPttSoundDevice?.Name;

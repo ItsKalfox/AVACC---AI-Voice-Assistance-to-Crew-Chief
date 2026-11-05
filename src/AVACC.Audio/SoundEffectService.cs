@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -10,7 +11,6 @@ public class SoundEffectService : ISoundEffectService
 {
     private readonly ISettingsService _settingsService;
     private readonly IEventLogService _eventLogService;
-    private readonly ConcurrentDictionary<string, byte[]> _soundCache = new(StringComparer.OrdinalIgnoreCase);
 
     public SoundEffectService(
         ISettingsService settingsService,
@@ -25,13 +25,6 @@ public class SoundEffectService : ISoundEffectService
             pttService.PttPressed += (s, e) => PlayPttStart();
             pttService.PttReleased += (s, e) => PlayPttEnd();
         }
-
-        // Preload sounds asynchronously on startup
-        Task.Run(() =>
-        {
-            GetSoundData("start_ptt.wav");
-            GetSoundData("end_ptt.wav");
-        });
     }
 
     public void PlayPttStart()
@@ -50,6 +43,67 @@ public class SoundEffectService : ISoundEffectService
         PlaySoundInternal("end_ptt.wav", settings.PttSoundVolume, settings.PttSoundOutputDeviceId);
     }
 
+    public void PlayDidntUnderstand()
+    {
+        var settings = _settingsService.CurrentSettings;
+        if (!settings.EnableDidntUnderstandSound) return;
+
+        Task.Run(() =>
+        {
+            try
+            {
+                var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var selected = settings.SelectedChiefVoicePersona;
+                var persona = (string.IsNullOrEmpty(selected) || string.Equals(selected, "Auto-Detect", StringComparison.OrdinalIgnoreCase))
+                    ? DetectActiveChiefPersona()
+                    : selected;
+
+                string targetDir;
+                if (string.Equals(persona, "Jim", StringComparison.OrdinalIgnoreCase))
+                {
+                    targetDir = Path.Combine(localAppData, "CrewChiefV4", "Sounds", "voice", "acknowledge", "didnt_understand");
+                }
+                else
+                {
+                    targetDir = Path.Combine(localAppData, "CrewChiefV4", "Sounds", "alt", persona, "voice", "acknowledge", "didnt_understand");
+                    if (!Directory.Exists(targetDir))
+                    {
+                        targetDir = Path.Combine(localAppData, "CrewChiefV4", "Sounds", "voice", "acknowledge", "didnt_understand");
+                    }
+                }
+
+                if (!Directory.Exists(targetDir))
+                {
+                    _eventLogService.LogWarning($"Crew Chief 'didn't understand' folder not found at '{targetDir}'");
+                    return;
+                }
+
+                var files = Directory.GetFiles(targetDir, "*.wav");
+                if (files.Length == 0)
+                {
+                    _eventLogService.LogWarning($"No .wav files found in '{targetDir}'");
+                    return;
+                }
+
+                var randomFile = files[Random.Shared.Next(files.Length)];
+                _eventLogService.LogInfo($"Playing Crew Chief 'didn't understand' ({persona}): {Path.GetFileName(randomFile)}");
+                PlayFileInternal(randomFile, settings.PttSoundVolume, settings.PttSoundOutputDeviceId);
+            }
+            catch (Exception ex)
+            {
+                _eventLogService.LogWarning($"Failed to play 'didn't understand' sound: {ex.Message}");
+            }
+        });
+    }
+
+    public void PlayAiError()
+    {
+        var settings = _settingsService.CurrentSettings;
+        if (!settings.EnableAiErrorSound) return;
+
+        PlaySoundInternal("error.mp3", settings.PttSoundVolume, settings.PttSoundOutputDeviceId);
+    }
+
     public void PlaySound(string soundName, float? volumeOverride = null, string? deviceIdOverride = null)
     {
         var settings = _settingsService.CurrentSettings;
@@ -58,19 +112,84 @@ public class SoundEffectService : ISoundEffectService
         PlaySoundInternal(soundName, volume, deviceId);
     }
 
+    public IReadOnlyList<string> GetAvailableChiefPersonas()
+    {
+        var personas = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Jim" };
+        try
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var altDir = Path.Combine(localAppData, "CrewChiefV4", "Sounds", "alt");
+            if (Directory.Exists(altDir))
+            {
+                foreach (var dir in Directory.GetDirectories(altDir))
+                {
+                    var name = Path.GetFileName(dir);
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        personas.Add(name);
+                    }
+                }
+            }
+        }
+        catch { }
+
+        var list = new List<string> { "Auto-Detect" };
+        list.AddRange(personas.OrderBy(p => p, StringComparer.OrdinalIgnoreCase));
+        return list;
+    }
+
+    public string DetectActiveChiefPersona()
+    {
+        try
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var brittonDir = Path.Combine(localAppData, "Britton_IT_Ltd");
+            if (Directory.Exists(brittonDir))
+            {
+                var configFiles = Directory.GetFiles(brittonDir, "user.config", SearchOption.AllDirectories)
+                    .OrderByDescending(File.GetLastWriteTimeUtc);
+
+                foreach (var configFile in configFiles)
+                {
+                    var content = File.ReadAllText(configFile);
+                    var match = Regex.Match(
+                        content,
+                        @"<setting\s+name=""chief_name""\s+serializeAs=""String"">\s*<value>([^<]+)</value>",
+                        RegexOptions.IgnoreCase);
+
+                    if (match.Success && !string.IsNullOrWhiteSpace(match.Groups[1].Value))
+                    {
+                        return match.Groups[1].Value.Trim();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _eventLogService.LogWarning($"Failed to auto-detect active Chief persona: {ex.Message}");
+        }
+
+        return "Jim";
+    }
+
     private void PlaySoundInternal(string soundName, float volume, string? deviceId)
+    {
+        var path = ResolveSoundFilePath(soundName);
+        if (string.IsNullOrEmpty(path))
+        {
+            _eventLogService.LogWarning($"Sound cue '{soundName}' not found in fx-sound folder.");
+            return;
+        }
+
+        PlayFileInternal(path, volume, deviceId);
+    }
+
+    private void PlayFileInternal(string filePath, float volume, string? deviceId)
     {
         Task.Run(() =>
         {
             try
             {
-                var soundData = GetSoundData(soundName);
-                if (soundData == null || soundData.Length == 0)
-                {
-                    _eventLogService.LogWarning($"PTT cue sound '{soundName}' not found in fx-sound folder.");
-                    return;
-                }
-
                 using var enumerator = new MMDeviceEnumerator();
                 MMDevice? targetDevice = null;
 
@@ -86,11 +205,8 @@ public class SoundEffectService : ISoundEffectService
 
                 targetDevice ??= enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 
-                var ms = new MemoryStream(soundData);
-                var waveReader = new WaveFileReader(ms);
-                var sampleProvider = waveReader.ToSampleProvider();
-
-                var volumeProvider = new VolumeSampleProvider(sampleProvider)
+                var audioReader = new AudioFileReader(filePath);
+                var volumeProvider = new VolumeSampleProvider(audioReader)
                 {
                     Volume = Math.Clamp(volume, 0.0f, 1.0f)
                 };
@@ -103,8 +219,7 @@ public class SoundEffectService : ISoundEffectService
                     try
                     {
                         wasapiOut.Dispose();
-                        waveReader.Dispose();
-                        ms.Dispose();
+                        audioReader.Dispose();
                     }
                     catch { }
                 };
@@ -113,27 +228,12 @@ public class SoundEffectService : ISoundEffectService
             }
             catch (Exception ex)
             {
-                _eventLogService.LogWarning($"Failed to play sound '{soundName}': {ex.Message}");
+                _eventLogService.LogWarning($"Failed to play audio '{filePath}': {ex.Message}");
             }
         });
     }
 
-    private byte[]? GetSoundData(string fileName)
-    {
-        if (_soundCache.TryGetValue(fileName, out var cached))
-        {
-            return cached;
-        }
-
-        var loaded = LoadSoundBytes(fileName);
-        if (loaded != null && loaded.Length > 0)
-        {
-            _soundCache[fileName] = loaded;
-        }
-        return loaded;
-    }
-
-    private static byte[]? LoadSoundBytes(string fileName)
+    private static string? ResolveSoundFilePath(string fileName)
     {
         var alternatives = new List<string> { fileName };
         if (fileName.Contains('_')) alternatives.Add(fileName.Replace('_', '-'));
@@ -156,11 +256,7 @@ public class SoundEffectService : ISoundEffectService
                 var fullPath = Path.Combine(dir, alt);
                 if (File.Exists(fullPath))
                 {
-                    try
-                    {
-                        return File.ReadAllBytes(fullPath);
-                    }
-                    catch { }
+                    return fullPath;
                 }
             }
         }
@@ -168,4 +264,3 @@ public class SoundEffectService : ISoundEffectService
         return null;
     }
 }
-

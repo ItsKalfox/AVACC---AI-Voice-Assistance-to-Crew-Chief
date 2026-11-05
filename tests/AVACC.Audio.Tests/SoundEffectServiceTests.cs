@@ -82,4 +82,46 @@ public class SoundEffectServiceTests
         ptt.TriggerPttDown();
         ptt.TriggerPttUp();
     }
+
+    [Fact]
+    public void SoundEffectService_GetAvailableChiefPersonas_ReturnsDefaultsWithoutCrashing()
+    {
+        var settings = new FakeSettingsService();
+        var logs = new FakeEventLogService();
+        var ptt = new FakePushToTalkService();
+
+        var service = new SoundEffectService(settings, logs, ptt);
+        var personas = service.GetAvailableChiefPersonas();
+
+        Assert.NotNull(personas);
+        Assert.Contains("Auto-Detect", personas);
+        Assert.Contains("Jim", personas);
+    }
+
+    [Fact]
+    public void SoundEffectService_DetectActiveChiefPersona_ReturnsFallbackWithoutCrashing()
+    {
+        var settings = new FakeSettingsService();
+        var logs = new FakeEventLogService();
+        var ptt = new FakePushToTalkService();
+
+        var service = new SoundEffectService(settings, logs, ptt);
+        var detected = service.DetectActiveChiefPersona();
+
+        Assert.False(string.IsNullOrWhiteSpace(detected));
+    }
+
+    [Fact]
+    public void SoundEffectService_PlayDidntUnderstand_AndPlayAiError_ExecuteWithoutCrashing()
+    {
+        var settings = new FakeSettingsService();
+        settings.CurrentSettings.EnableDidntUnderstandSound = false; // Disabled during unit test
+        settings.CurrentSettings.EnableAiErrorSound = false;
+        var logs = new FakeEventLogService();
+        var ptt = new FakePushToTalkService();
+
+        var service = new SoundEffectService(settings, logs, ptt);
+        service.PlayDidntUnderstand();
+        service.PlayAiError();
+    }
 }

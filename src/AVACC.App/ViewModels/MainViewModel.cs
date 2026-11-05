@@ -16,6 +16,7 @@ public class MainViewModel : ObservableObject
     private readonly IAIProviderFactory _providerFactory;
     private readonly ICrewChiefMonitorService _crewChiefMonitor;
     private readonly ICrewChiefBridgeService _crewChiefBridge;
+    private readonly ISoundEffectService _soundEffectService;
 
     private int _selectedTabIndex;
     private string _overallStatus = "IDLE";
@@ -107,7 +108,8 @@ public class MainViewModel : ObservableObject
         ICommandRegistryService registryService,
         IAIProviderFactory providerFactory,
         ICrewChiefMonitorService crewChiefMonitor,
-        ICrewChiefBridgeService crewChiefBridge)
+        ICrewChiefBridgeService crewChiefBridge,
+        ISoundEffectService soundEffectService)
     {
         VisualCMD = visualCmdVm;
         CommandEditor = commandEditorVm;
@@ -120,6 +122,7 @@ public class MainViewModel : ObservableObject
         _providerFactory = providerFactory;
         _crewChiefMonitor = crewChiefMonitor;
         _crewChiefBridge = crewChiefBridge;
+        _soundEffectService = soundEffectService;
 
         SelectTabCommand = new RelayCommand<object>(param =>
         {
@@ -346,6 +349,7 @@ public class MainViewModel : ObservableObject
                     VisualCMD.ErrorMessage = result.Error;
                     OverallStatus = "ERROR";
                     _eventLogService.LogError($"AI processing error: {result.Error}");
+                    _soundEffectService.PlayAiError();
                 }
                 else
                 {
@@ -383,8 +387,8 @@ public class MainViewModel : ObservableObject
                         RawJsonResponse = result.RawJsonResponse
                     });
 
-                    // Auto-forward to Crew Chief if enabled
-                    if (settings.EnableCrewChiefBridge && settings.AutoSendToCrewChief && !string.IsNullOrEmpty(result.CommandId) && result.IsSuccess)
+                    // Auto-forward to Crew Chief if enabled, otherwise play native didn't understand response
+                    if (settings.EnableCrewChiefBridge && settings.AutoSendToCrewChief && !string.IsNullOrEmpty(result.CommandId) && result.IsSuccess && result.CommandId != "NO_MATCHING_COMMAND")
                     {
                         var phraseToSpeak = !string.IsNullOrWhiteSpace(result.SpokenPhrase)
                             ? result.SpokenPhrase
@@ -400,12 +404,18 @@ public class MainViewModel : ObservableObject
                             }
                         });
                     }
+                    else
+                    {
+                        // Play native Crew Chief didn't understand voice clip for unmatched speech
+                        _soundEffectService.PlayDidntUnderstand();
+                    }
                 }
             });
         }
         catch (Exception ex)
         {
             _eventLogService.LogError($"Pipeline error: {ex.Message}");
+            _soundEffectService.PlayAiError();
             Application.Current?.Dispatcher?.Invoke(() =>
             {
                 VisualCMD.CurrentState = ProcessingState.Error;
