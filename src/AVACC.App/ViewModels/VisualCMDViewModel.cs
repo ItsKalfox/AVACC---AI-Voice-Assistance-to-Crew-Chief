@@ -263,6 +263,33 @@ public class VisualCMDViewModel : ObservableObject
         _eventLogService.LogInfo("Crew Chief Integration Bridge ready (Offline Windows TTS loopback).");
     }
 
+    public void SetSuggestedCommand(string? commandId, string? spokenPhrase = null)
+    {
+        _suggestedCommandId = commandId;
+        OnPropertyChanged(nameof(SuggestedCommandId));
+
+        var hasValidCmd = !string.IsNullOrWhiteSpace(_suggestedCommandId) &&
+            !_suggestedCommandId.Contains("AWAITING", StringComparison.OrdinalIgnoreCase) &&
+            !_suggestedCommandId.Contains("NO_MATCHING", StringComparison.OrdinalIgnoreCase) &&
+            !_suggestedCommandId.Contains("ERROR", StringComparison.OrdinalIgnoreCase);
+
+        CanSendToCrewChief = hasValidCmd;
+
+        if (!string.IsNullOrWhiteSpace(spokenPhrase))
+        {
+            CrewChiefCanonicalPhrase = spokenPhrase.Trim();
+        }
+        else
+        {
+            CrewChiefCanonicalPhrase = hasValidCmd ? _crewChiefBridge.GetCanonicalPhrase(_suggestedCommandId!) : string.Empty;
+        }
+
+        if (!hasValidCmd)
+        {
+            CrewChiefSendStatus = string.Empty;
+        }
+    }
+
     private void UpdateCrewChiefAvailability()
     {
         var hasValidCmd = !string.IsNullOrWhiteSpace(_suggestedCommandId) &&
@@ -288,7 +315,7 @@ public class VisualCMDViewModel : ObservableObject
 
         try
         {
-            var success = await _crewChiefBridge.SendCommandAsync(SuggestedCommandId);
+            var success = await _crewChiefBridge.SendCommandAsync(SuggestedCommandId, CrewChiefCanonicalPhrase);
             if (success)
             {
                 CrewChiefSendStatus = "Transmitted to Crew Chief!";

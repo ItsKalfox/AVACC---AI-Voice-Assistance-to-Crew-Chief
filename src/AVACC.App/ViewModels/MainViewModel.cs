@@ -343,7 +343,7 @@ public class MainViewModel : ObservableObject
                 else
                 {
                     VisualCMD.TranscribedText = result.Transcript;
-                    VisualCMD.SuggestedCommandId = result.CommandId ?? "NO_MATCHING_COMMAND";
+                    VisualCMD.SetSuggestedCommand(result.CommandId ?? "NO_MATCHING_COMMAND", result.SpokenPhrase);
                     VisualCMD.InterpretedIntent = result.Intent;
                     VisualCMD.LlmReason = result.Reason;
                     VisualCMD.LlmConfidence = result.Confidence;
@@ -379,10 +379,14 @@ public class MainViewModel : ObservableObject
                     // Auto-forward to Crew Chief if enabled
                     if (settings.EnableCrewChiefBridge && settings.AutoSendToCrewChief && !string.IsNullOrEmpty(result.CommandId) && result.IsSuccess)
                     {
-                        _eventLogService.LogInfo($"Auto-forwarding '{result.CommandId}' to Crew Chief via TTS audio bridge...");
+                        var phraseToSpeak = !string.IsNullOrWhiteSpace(result.SpokenPhrase)
+                            ? result.SpokenPhrase
+                            : _crewChiefBridge.GetCanonicalPhrase(result.CommandId);
+
+                        _eventLogService.LogInfo($"Auto-forwarding '{result.CommandId}' to Crew Chief via TTS audio bridge (Phrase: \"{phraseToSpeak}\")...");
                         _ = Task.Run(async () =>
                         {
-                            var ok = await _crewChiefBridge.SendCommandAsync(result.CommandId);
+                            var ok = await _crewChiefBridge.SendCommandAsync(result.CommandId, phraseToSpeak);
                             if (ok)
                             {
                                 _eventLogService.LogInfo($"Command '{result.CommandId}' successfully dispatched to Crew Chief.");

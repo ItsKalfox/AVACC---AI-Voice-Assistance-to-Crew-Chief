@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Comprehensive Crew Chief Commands Dataset (`CrewChief_All_Commands.csv`):**
+  - Generated full dataset of 271 Crew Chief commands extracted directly from official `speech_recognition_config.txt` documentation.
+  - Complete coverage across 14 categories: `Tyres`, `Brakes`, `Powertrain`, `Damage`, `Fuel`, `Timing`, `Gaps`, `Session`, `Pitstop`, `Comms`, `Display`, `Opponents`, `Rally`, and `General`.
+  - Every command includes user-friendly display name, exact `CrewChiefCommandId`, description, canonical `VoiceLine`, natural language examples, aliases, and sensible default active state (`IsEnabled=True` for circuit racing, `IsEnabled=False` for rally/niche telemetry charts to preserve token limits).
+  - Configured `RADIO_CHECK` with canonical voice line `"can you hear me"` matching Crew Chief's speech recognition grammar.
+- **Dynamic Recognition Phrase Synthesis Engine (`CrewChiefPhraseHelper`):**
+  - Added support for dynamic recognition phrase fragments described in Crew Chief documentation (e.g. `WHATS + POSITION_LONG + POSSESSIVE + LAST_LAP`, `CALCULATE_FUEL_FOR + {laps/minutes}`, `WHOS_IN + POSITION`, `WHERE_IS + POSITION`).
+  - Added intelligent parameter extraction for race positions (e.g. "P4", "position 4", "third place"), fuel calculation quantities (e.g. "25 laps", "45 minutes"), driver names, and alarm timers.
+  - Built-in phonetic number-to-word converter for 0 to 100 adhering to Crew Chief's voice recognizer grammar (e.g. `4` -> `"four"`, `25` -> `"twenty-five"`, `40` -> `"fourty"`).
+  - Integrated dynamic phrase resolution into `PromptBuilder.ParseStructuredResponse`, `VisualCMDViewModel`, and `MainViewModel`, ensuring the exact parameterized verbal phrase (e.g. `"what's position four's last lap"`, `"calculate fuel for twenty-five laps"`) is displayed in the UI and spoken over the TTS audio bridge.
+- **Idempotent CSV Import & Category Expansion:**
+  - Updated `ConfirmImportAsync` in `CommandEditorViewModel` to update existing commands by `CrewChiefCommandId` rather than appending duplicate entries.
+  - Expanded category filter dropdown in Command Editor to include all 14 categories (`Tyres`, `Brakes`, `Powertrain`, `Damage`, `Fuel`, `Timing`, `Gaps`, `Session`, `Pitstop`, `Comms`, `Display`, `Opponents`, `Rally`, and `General`).
 - **Customizable Voice Line Field for Crew Chief Bridge:**
   - Added `VoiceLine` field to `CommandDefinition`, enabling users to inspect and override the exact verbal phrase sent via TTS into Crew Chief for every command.
   - Added "Voice Line (exact verbal phrase spoken to Crew Chief)" text input to the Command Editor panel and a dedicated column in the Command Registry table.

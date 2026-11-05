@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using AVACC.Core.Helpers;
 using AVACC.Core.Models;
 
 namespace AVACC.AI;
@@ -17,12 +18,14 @@ public static class PromptBuilder
         sb.AppendLine("2. If the user's request does not match any available command with reasonable confidence, set command_id to null and requires_clarification to true.");
         sb.AppendLine("3. Self-report your confidence (0.0 to 1.0).");
         sb.AppendLine("4. Respond ONLY with a valid JSON object matching the requested schema. No conversational filler.");
+        sb.AppendLine("5. For dynamic commands with templates (e.g. {number}, {amount}, {unit}), populate 'spoken_phrase' with the exact phrase to speak to Crew Chief (e.g. 'what\\'s position four\\'s last lap', 'calculate fuel for twenty-five laps').");
         sb.AppendLine();
         sb.AppendLine("OUTPUT JSON SCHEMA:");
         sb.AppendLine("{");
         sb.AppendLine("  \"transcript\": \"Exact transcription of what the driver spoke in the audio\",");
         sb.AppendLine("  \"intent\": \"short_snake_case_intent_description\",");
         sb.AppendLine("  \"command_id\": \"EXACT_CREW_CHIEF_COMMAND_ID_OR_NULL\",");
+        sb.AppendLine("  \"spoken_phrase\": \"The exact verbal phrase to push to Crew Chief (e.g. 'can you hear me', 'how\\'s my tire wear', 'what\\'s position four\\'s last lap', 'calculate fuel for twenty-five laps')\",");
         sb.AppendLine("  \"confidence\": 0.95,");
         sb.AppendLine("  \"reason\": \"Concise reason for mapping\",");
         sb.AppendLine("  \"requires_clarification\": false");
@@ -128,6 +131,15 @@ public static class PromptBuilder
                 result.Confidence = Math.Clamp(confVal, 0.0, 1.0);
             }
 
+            if (root.TryGetProperty("spoken_phrase", out var spokenEl) && spokenEl.ValueKind == JsonValueKind.String)
+            {
+                var sp = spokenEl.GetString()?.Trim();
+                if (!string.IsNullOrEmpty(sp))
+                {
+                    result.SpokenPhrase = sp;
+                }
+            }
+
             string? reportedCommandId = null;
             if (root.TryGetProperty("command_id", out var cmdEl) && cmdEl.ValueKind == JsonValueKind.String)
             {
@@ -143,6 +155,13 @@ public static class PromptBuilder
                 if (matchingCommand != null)
                 {
                     result.CommandId = matchingCommand.CrewChiefCommandId;
+
+                    // Resolve exact verbal phrase using LLM response, dynamic parameters, or configured VoiceLine
+                    result.SpokenPhrase = CrewChiefPhraseHelper.ResolvePhrase(
+                        result.CommandId,
+                        result.SpokenPhrase,
+                        result.Transcript,
+                        matchingCommand.VoiceLine);
                 }
                 else
                 {

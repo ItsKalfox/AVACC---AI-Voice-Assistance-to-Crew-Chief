@@ -25,7 +25,7 @@ public interface ICrewChiefMonitorService
 
 public interface ICrewChiefBridgeService
 {
-    Task<bool> SendCommandAsync(string commandId, CancellationToken cancellationToken = default);
+    Task<bool> SendCommandAsync(string commandId, string? phraseOverride = null, CancellationToken cancellationToken = default);
     Task<bool> SpeakPhraseAsync(string phrase, CancellationToken cancellationToken = default);
     string GetCanonicalPhrase(string commandId);
     IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices();

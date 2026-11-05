@@ -254,9 +254,9 @@ public class CrewChiefBridgeService : ICrewChiefBridgeService
         return _microphoneManager.GetPlaybackDevices();
     }
 
-    public async Task<bool> SendCommandAsync(string commandId, CancellationToken cancellationToken = default)
+    public async Task<bool> SendCommandAsync(string commandId, string? phraseOverride = null, CancellationToken cancellationToken = default)
     {
-        var phrase = GetCanonicalPhrase(commandId);
+        var phrase = !string.IsNullOrWhiteSpace(phraseOverride) ? phraseOverride.Trim() : GetCanonicalPhrase(commandId);
         if (string.IsNullOrWhiteSpace(phrase))
         {
             _eventLogService.LogWarning($"Cannot bridge command '{commandId}': no verbal trigger phrase available.");

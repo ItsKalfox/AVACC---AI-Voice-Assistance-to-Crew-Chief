@@ -8,6 +8,12 @@ public class VoiceCommandResult
 
     public string? CommandId { get; set; }
 
+    /// <summary>
+    /// The exact synthesized verbal phrase to be forwarded to Crew Chief via TTS audio bridge.
+    /// Supports dynamic parameters (e.g. 'what's position four's last lap', 'calculate fuel for twenty-five laps').
+    /// </summary>
+    public string? SpokenPhrase { get; set; }
+
     public double? Confidence { get; set; }
 
     public string? Reason { get; set; }

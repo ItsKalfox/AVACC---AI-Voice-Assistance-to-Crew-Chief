@@ -49,7 +49,7 @@ public class CommandEditorViewModel : ObservableObject
 
     public ObservableCollection<CommandDefinition> Commands => _commands;
     public ICollectionView CommandsView => _commandsView;
-    public ObservableCollection<string> Categories { get; } = new() { "All", "Fuel", "Tyres", "Brakes", "Gaps", "Session", "Timing", "Damage", "Pitstop", "General" };
+    public ObservableCollection<string> Categories { get; } = new() { "All", "Fuel", "Tyres", "Brakes", "Powertrain", "Damage", "Timing", "Gaps", "Session", "Pitstop", "Comms", "Display", "Opponents", "Rally", "General" };
 
     public CommandDefinition? SelectedCommand
     {
@@ -463,6 +463,8 @@ public class CommandEditorViewModel : ObservableObject
         }
 
         int count = 0;
+        var existingCommands = _registryService.Commands;
+
         foreach (var item in toImport)
         {
             var examples = item.ExamplesRaw
@@ -477,20 +479,38 @@ public class CommandEditorViewModel : ObservableObject
                 .Where(a => !string.IsNullOrEmpty(a))
                 .ToList();
 
-            var cmd = new CommandDefinition
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                Name = string.IsNullOrWhiteSpace(item.Name) ? item.CrewChiefCommandId : item.Name.Trim(),
-                CrewChiefCommandId = item.CrewChiefCommandId.Trim().ToUpperInvariant(),
-                Category = string.IsNullOrWhiteSpace(item.Category) ? "General" : item.Category.Trim(),
-                Description = item.Description.Trim(),
-                VoiceLine = string.IsNullOrWhiteSpace(item.VoiceLine) ? null : item.VoiceLine.Trim(),
-                Examples = examples,
-                Aliases = aliases,
-                IsEnabled = item.IsEnabled
-            };
+            var cleanId = item.CrewChiefCommandId.Trim().ToUpperInvariant();
+            var existing = existingCommands.FirstOrDefault(c => string.Equals(c.CrewChiefCommandId, cleanId, StringComparison.OrdinalIgnoreCase));
 
-            await _registryService.AddCommandAsync(cmd);
+            if (existing != null)
+            {
+                existing.Name = string.IsNullOrWhiteSpace(item.Name) ? existing.Name : item.Name.Trim();
+                existing.Category = string.IsNullOrWhiteSpace(item.Category) ? existing.Category : item.Category.Trim();
+                existing.Description = item.Description.Trim();
+                existing.VoiceLine = string.IsNullOrWhiteSpace(item.VoiceLine) ? existing.VoiceLine : item.VoiceLine.Trim();
+                existing.Examples = examples;
+                existing.Aliases = aliases;
+                existing.IsEnabled = item.IsEnabled;
+                await _registryService.UpdateCommandAsync(existing);
+            }
+            else
+            {
+                var cmd = new CommandDefinition
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Name = string.IsNullOrWhiteSpace(item.Name) ? item.CrewChiefCommandId : item.Name.Trim(),
+                    CrewChiefCommandId = cleanId,
+                    Category = string.IsNullOrWhiteSpace(item.Category) ? "General" : item.Category.Trim(),
+                    Description = item.Description.Trim(),
+                    VoiceLine = string.IsNullOrWhiteSpace(item.VoiceLine) ? null : item.VoiceLine.Trim(),
+                    Examples = examples,
+                    Aliases = aliases,
+                    IsEnabled = item.IsEnabled
+                };
+
+                await _registryService.AddCommandAsync(cmd);
+            }
+
             count++;
         }
 
