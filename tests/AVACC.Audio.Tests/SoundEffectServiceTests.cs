@@ -1,0 +1,85 @@
+using AVACC.Audio;
+using AVACC.Core.Configuration;
+using AVACC.Core.Interfaces;
+using AVACC.Core.Models;
+using Xunit;
+
+namespace AVACC.Audio.Tests;
+
+public class SoundEffectServiceTests
+{
+    private class FakeSettingsService : ISettingsService
+    {
+        public AppSettings CurrentSettings { get; set; } = new();
+        public event EventHandler<AppSettings>? SettingsChanged;
+        public Task<AppSettings> LoadSettingsAsync() => Task.FromResult(CurrentSettings);
+        public Task SaveSettingsAsync(AppSettings settings)
+        {
+            CurrentSettings = settings;
+            SettingsChanged?.Invoke(this, settings);
+            return Task.CompletedTask;
+        }
+    }
+
+    private class FakeEventLogService : IEventLogService
+    {
+        public System.Collections.ObjectModel.ObservableCollection<LogEntry> Entries { get; } = new();
+        public event EventHandler<LogEntry>? LogEntryAdded;
+        public void Log(LogLevel level, string message, string? details = null) { }
+        public void LogInfo(string message, string? details = null) { }
+        public void LogDebug(string message, string? details = null) { }
+        public void LogWarning(string message, string? details = null) { }
+        public void LogError(string message, string? details = null) { }
+        public void Clear() { }
+        public Task<string> ExportLogsAsync() => Task.FromResult(string.Empty);
+    }
+
+    private class FakePushToTalkService : IPushToTalkService
+    {
+        public bool IsActive => false;
+        public bool IsPttActive => false;
+        public string ConfiguredKey => "RightCtrl";
+        public bool IsGlobalHookActive => false;
+        public bool IsCapturingBinding => false;
+        public event EventHandler? PttPressed;
+        public event EventHandler? PttReleased;
+        public event EventHandler<string>? KeyDetectedForBinding;
+
+        public void Initialize(string key, bool globalHook, bool disableWhenInactive) { }
+        public void UpdateConfiguration(string key, bool globalHook, bool disableWhenInactive) { }
+        public void TriggerPttDown() => PttPressed?.Invoke(this, EventArgs.Empty);
+        public void TriggerPttUp() => PttReleased?.Invoke(this, EventArgs.Empty);
+        public void StartCapturingBinding() { }
+        public void StopCapturingBinding() { }
+        public void Dispose() { }
+    }
+
+    [Fact]
+    public void SoundEffectService_Initializes_AndPreloadsSoundsWithoutCrashing()
+    {
+        var settings = new FakeSettingsService();
+        var logs = new FakeEventLogService();
+        var ptt = new FakePushToTalkService();
+
+        var service = new SoundEffectService(settings, logs, ptt);
+
+        Assert.NotNull(service);
+    }
+
+    [Fact]
+    public void SoundEffectService_SubscribesToPttEvents()
+    {
+        var settings = new FakeSettingsService();
+        settings.CurrentSettings.EnablePttStartSound = false; // Disable actual audio output during test
+        settings.CurrentSettings.EnablePttEndSound = false;
+
+        var logs = new FakeEventLogService();
+        var ptt = new FakePushToTalkService();
+
+        var service = new SoundEffectService(settings, logs, ptt);
+
+        // Triggering PTT down and up should not throw
+        ptt.TriggerPttDown();
+        ptt.TriggerPttUp();
+    }
+}

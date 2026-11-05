@@ -58,6 +58,9 @@ public partial class App : Application
             pttService.UpdateConfiguration(newSettings.PttKey, newSettings.IsGlobalPttEnabled, newSettings.DisablePttWhenInactive);
         };
 
+        // Initialize PTT Sound Feedback Service
+        _ = _serviceProvider.GetRequiredService<ISoundEffectService>();
+
         // Initialize Crew Chief Monitor
         var crewChiefMonitor = _serviceProvider.GetRequiredService<ICrewChiefMonitorService>();
         crewChiefMonitor.StartMonitoring();
@@ -86,6 +89,7 @@ public partial class App : Application
         services.AddSingleton<MicrophoneManager>();
         services.AddSingleton<IAudioCaptureService, AudioCaptureService>();
         services.AddSingleton<IPushToTalkService, PushToTalkService>();
+        services.AddSingleton<ISoundEffectService, SoundEffectService>();
         services.AddSingleton<ICrewChiefBridgeService, CrewChiefBridgeService>();
 
         // AI Providers

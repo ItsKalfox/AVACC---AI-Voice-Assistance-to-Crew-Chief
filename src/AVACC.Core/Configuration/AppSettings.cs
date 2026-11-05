@@ -30,6 +30,13 @@ public class AppSettings
     public bool VoiceActivityDetectionEnabled { get; set; } = false;
     public bool NoiseSuppressionEnabled { get; set; } = false;
 
+    // PTT Sound Effects
+    public bool EnablePttStartSound { get; set; } = true;
+    public bool EnablePttEndSound { get; set; } = true;
+    public string? PttSoundOutputDeviceId { get; set; }
+    public string? PttSoundOutputDeviceName { get; set; }
+    public float PttSoundVolume { get; set; } = 0.8f;
+
     // Audio Capture Settings
     public string? SelectedAudioDeviceId { get; set; }
     public string? SelectedAudioDeviceName { get; set; }

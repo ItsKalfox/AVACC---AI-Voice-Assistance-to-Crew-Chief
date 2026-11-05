@@ -18,6 +18,7 @@ public class SettingsViewModel : ObservableObject
     private readonly ICrewChiefMonitorService _crewChiefMonitor;
     private readonly ICommandRegistryService _registryService;
     private readonly IPushToTalkService _pttService;
+    private readonly ISoundEffectService? _soundEffectService;
 
     // Architecture
     private bool _isSimpleMode = true;
@@ -61,6 +62,12 @@ public class SettingsViewModel : ObservableObject
     private bool _voiceActivityDetection;
     private bool _noiseSuppression;
     private bool _optimizePromptPayload = true;
+
+    // PTT Sound Effects
+    private bool _enablePttStartSound = true;
+    private bool _enablePttEndSound = true;
+    private AudioDeviceInfo? _selectedPttSoundDevice;
+    private float _pttSoundVolume = 0.8f;
 
     // Audio settings
     public ObservableCollection<AudioDeviceInfo> AvailableAudioDevices { get; } = new();
@@ -268,6 +275,42 @@ public class SettingsViewModel : ObservableObject
         set => SetProperty(ref _optimizePromptPayload, value);
     }
 
+    public bool EnablePttStartSound
+    {
+        get => _enablePttStartSound;
+        set => SetProperty(ref _enablePttStartSound, value);
+    }
+
+    public bool EnablePttEndSound
+    {
+        get => _enablePttEndSound;
+        set => SetProperty(ref _enablePttEndSound, value);
+    }
+
+    public AudioDeviceInfo? SelectedPttSoundDevice
+    {
+        get => _selectedPttSoundDevice;
+        set => SetProperty(ref _selectedPttSoundDevice, value);
+    }
+
+    public float PttSoundVolume
+    {
+        get => _pttSoundVolume;
+        set
+        {
+            if (SetProperty(ref _pttSoundVolume, value))
+            {
+                OnPropertyChanged(nameof(PttSoundVolumePercent));
+            }
+        }
+    }
+
+    public int PttSoundVolumePercent
+    {
+        get => (int)Math.Round(_pttSoundVolume * 100);
+        set => PttSoundVolume = Math.Clamp(value / 100f, 0f, 1f);
+    }
+
     public AudioDeviceInfo? SelectedAudioDevice
     {
         get => _selectedAudioDevice;
@@ -358,6 +401,8 @@ public class SettingsViewModel : ObservableObject
     public AsyncRelayCommand SaveSettingsCommand { get; }
     public RelayCommand RecordPttKeyCommand { get; }
     public RelayCommand ResetPttKeyToDefaultCommand { get; }
+    public RelayCommand TestPttStartSoundCommand { get; }
+    public RelayCommand TestPttEndSoundCommand { get; }
 
     public SettingsViewModel(
         ISettingsService settingsService,
@@ -368,7 +413,8 @@ public class SettingsViewModel : ObservableObject
         ICrewChiefBridgeService crewChiefBridge,
         ICrewChiefMonitorService crewChiefMonitor,
         ICommandRegistryService registryService,
-        IPushToTalkService pttService)
+        IPushToTalkService pttService,
+        ISoundEffectService? soundEffectService = null)
     {
         _settingsService = settingsService;
         _secureKeyStorage = secureKeyStorage;
@@ -379,6 +425,7 @@ public class SettingsViewModel : ObservableObject
         _crewChiefMonitor = crewChiefMonitor;
         _registryService = registryService;
         _pttService = pttService;
+        _soundEffectService = soundEffectService;
 
         _pttService.KeyDetectedForBinding += (s, detectedKey) =>
         {
@@ -399,6 +446,8 @@ public class SettingsViewModel : ObservableObject
 
         RecordPttKeyCommand = new RelayCommand(RecordPttKey);
         ResetPttKeyToDefaultCommand = new RelayCommand(ResetPttKeyToDefault);
+        TestPttStartSoundCommand = new RelayCommand(() => _soundEffectService?.PlaySound("start_ptt.wav", PttSoundVolume, SelectedPttSoundDevice?.Id));
+        TestPttEndSoundCommand = new RelayCommand(() => _soundEffectService?.PlaySound("end_ptt.wav", PttSoundVolume, SelectedPttSoundDevice?.Id));
         SaveApiKeyCommand = new AsyncRelayCommand(SaveApiKeyAsync);
         RemoveApiKeyCommand = new AsyncRelayCommand(RemoveApiKeyAsync);
         TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync);
@@ -430,6 +479,10 @@ public class SettingsViewModel : ObservableObject
         VoiceActivityDetection = s.VoiceActivityDetectionEnabled;
         NoiseSuppression = s.NoiseSuppressionEnabled;
         OptimizePromptPayload = s.OptimizePromptPayload;
+
+        EnablePttStartSound = s.EnablePttStartSound;
+        EnablePttEndSound = s.EnablePttEndSound;
+        PttSoundVolume = s.PttSoundVolume;
 
         SampleRate = s.AudioSampleRate;
         InputBoost = s.InputLevelBoost;
@@ -604,6 +657,20 @@ public class SettingsViewModel : ObservableObject
                 ?? AvailablePlaybackDevices.FirstOrDefault();
         }
 
+        // PTT sound output device (default to standard speakers/headset, not virtual cable)
+        if (!string.IsNullOrEmpty(s.PttSoundOutputDeviceId))
+        {
+            SelectedPttSoundDevice = AvailablePlaybackDevices.FirstOrDefault(d => d.Id == s.PttSoundOutputDeviceId)
+                ?? AvailablePlaybackDevices.FirstOrDefault(d => d.Name == s.PttSoundOutputDeviceName);
+        }
+
+        if (SelectedPttSoundDevice == null)
+        {
+            SelectedPttSoundDevice = AvailablePlaybackDevices.FirstOrDefault(d => d.IsDefault)
+                ?? AvailablePlaybackDevices.FirstOrDefault(d => !d.Name.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+                ?? AvailablePlaybackDevices.FirstOrDefault();
+        }
+
         return Task.CompletedTask;
     }
 
@@ -689,6 +756,13 @@ public class SettingsViewModel : ObservableObject
         s.VoiceActivityDetectionEnabled = VoiceActivityDetection;
         s.NoiseSuppressionEnabled = NoiseSuppression;
         s.OptimizePromptPayload = OptimizePromptPayload;
+
+        // PTT Sound Effects
+        s.EnablePttStartSound = EnablePttStartSound;
+        s.EnablePttEndSound = EnablePttEndSound;
+        s.PttSoundVolume = PttSoundVolume;
+        s.PttSoundOutputDeviceId = SelectedPttSoundDevice?.Id;
+        s.PttSoundOutputDeviceName = SelectedPttSoundDevice?.Name;
 
         if (SelectedAudioDevice != null)
         {
