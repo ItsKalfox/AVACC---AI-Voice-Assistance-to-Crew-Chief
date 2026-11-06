@@ -25,58 +25,72 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- 1. TOP APP HEADER -->
-        <Border Grid.Row="0" Background="{StaticResource PanelBgBrush}" BorderBrush="{StaticResource CardBorderBrush}" 
-                BorderThickness="0,0,0,1" Padding="18,10">
+        <!-- 1. TOP APP HEADER (Motorsport Carbon Fiber) -->
+        <Border Grid.Row="0" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1" 
+                Background="{StaticResource CarbonFiberPatternBrush}">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+                <!-- Subtle Gradient Sheen Layer -->
+                <Border>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#14FFFFFF" Offset="0.0" />
+                            <GradientStop Color="#00000000" Offset="0.5" />
+                            <GradientStop Color="#30000000" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
 
-                <!-- App Branding with Logo -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Image Source="pack://application:,,,/Assets/AVACC-logo.png" Height="36" Stretch="Uniform" 
-                           RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,14,0" VerticalAlignment="Center" />
-                    <Border Height="20" Width="1" Background="{StaticResource CardBorderBrush}" Margin="0,0,14,0" VerticalAlignment="Center" />
-                    <TextBlock Text="AI VOICE ASSISTANCE TO CREW CHIEF" FontSize="11" FontWeight="Bold" 
-                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                </StackPanel>
+                <!-- Header Content -->
+                <Grid Margin="18,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <!-- Active Model & Mode Indicator -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="#0E0F12" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="12,5">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="AI ENGINE: " FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}" Margin="0,0,6,0" />
-                            <TextBlock Text="{Binding ActiveProviderInfo}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                    <!-- App Branding with Bigger Logo -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="pack://application:,,,/Assets/AVACC-logo.png" Height="48" Stretch="Uniform" 
+                               RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,14,0" VerticalAlignment="Center" />
+                        <Border Height="26" Width="1" Background="#33FFFFFF" Margin="0,0,14,0" VerticalAlignment="Center" />
+                        <TextBlock Text="AI VOICE ASSISTANCE TO CREW CHIEF" FontSize="11" FontWeight="Bold" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
 
-                <!-- Header Right Status Elements -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Crew Chief Process Status Gauge -->
-                    <Border Background="{Binding CrewChiefStateBackground}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="10,5" VerticalAlignment="Center" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                            <Rectangle Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center"
-                                       Fill="{Binding CrewChiefStateColor}" />
-                            <TextBlock Text="{Binding CrewChiefStatusDisplay}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Border>
-                    <Button Command="{Binding LaunchCrewChiefCommand}" 
-                            Visibility="{Binding CanLaunchCrewChief, Converter={StaticResource BooleanToVisibilityConverter}}"
-                            Content="LAUNCH" Margin="0,0,10,0" Padding="8,4" FontSize="10" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" VerticalAlignment="Center" />
+                    <!-- Active Model & Mode Indicator -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Background="#E60A0B0E" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="12,6">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="AI ENGINE: " FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}" Margin="0,0,6,0" />
+                                <TextBlock Text="{Binding ActiveProviderInfo}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
 
-                    <!-- PTT Live State Gauge -->
-                    <Border Background="#121316" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="12,5" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <Rectangle Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
-                                       Fill="{Binding VisualCMD.CurrentState, Converter={StaticResource StateToColorConverter}}" />
-                            <TextBlock Text="{Binding OverallStatus}" FontSize="11" FontWeight="Bold" FontFamily="Cascadia Code, Consolas" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                    <!-- Header Right Status Elements -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Crew Chief Process Status Gauge -->
+                        <Border Background="{Binding CrewChiefStateBackground}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="10,6" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center"
+                                           Fill="{Binding CrewChiefStateColor}" />
+                                <TextBlock Text="{Binding CrewChiefStatusDisplay}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Button Command="{Binding LaunchCrewChiefCommand}" 
+                                Visibility="{Binding CanLaunchCrewChief, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                Content="LAUNCH" Margin="0,0,10,0" Padding="8,4" FontSize="10" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" VerticalAlignment="Center" />
+
+                        <!-- PTT Live State Gauge -->
+                        <Border Background="#E60A0B0E" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="12,6" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                           Fill="{Binding VisualCMD.CurrentState, Converter={StaticResource StateToColorConverter}}" />
+                                <TextBlock Text="{Binding OverallStatus}" FontSize="11" FontWeight="Bold" FontFamily="Cascadia Code, Consolas" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Border>
 

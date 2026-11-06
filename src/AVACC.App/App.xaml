@@ -45,6 +45,13 @@
             <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#4A4F5F" />
             <SolidColorBrush x:Key="ScrollBarThumbDraggingBrush" Color="#E50914" />
 
+            <!-- Motorsport Carbon Fiber Pattern Brush -->
+            <ImageBrush x:Key="CarbonFiberPatternBrush" 
+                        ImageSource="pack://application:,,,/Assets/carbon-fiber.png" 
+                        TileMode="Tile" 
+                        Viewport="0,0,24,24" 
+                        ViewportUnits="Absolute" />
+
             <!-- Global TextBlock Style -->
             <Style TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
