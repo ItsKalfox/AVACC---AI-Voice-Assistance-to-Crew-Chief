@@ -16,13 +16,13 @@ public class StateToColorConverter : IValueConverter
             {
                 ProcessingState.Idle => new SolidColorBrush(Color.FromRgb(85, 92, 110)),
                 ProcessingState.ButtonPressed => new SolidColorBrush(Color.FromRgb(255, 171, 0)),
-                ProcessingState.Recording => new SolidColorBrush(Color.FromRgb(255, 23, 68)),
-                ProcessingState.ButtonReleased => new SolidColorBrush(Color.FromRgb(0, 229, 255)),
-                ProcessingState.ProcessingAudio => new SolidColorBrush(Color.FromRgb(0, 229, 255)),
-                ProcessingState.Transcribing => new SolidColorBrush(Color.FromRgb(179, 136, 255)),
-                ProcessingState.InterpretingCommand => new SolidColorBrush(Color.FromRgb(0, 229, 255)),
+                ProcessingState.Recording => new SolidColorBrush(Color.FromRgb(229, 9, 20)),
+                ProcessingState.ButtonReleased => new SolidColorBrush(Color.FromRgb(209, 213, 219)),
+                ProcessingState.ProcessingAudio => new SolidColorBrush(Color.FromRgb(229, 9, 20)),
+                ProcessingState.Transcribing => new SolidColorBrush(Color.FromRgb(229, 231, 235)),
+                ProcessingState.InterpretingCommand => new SolidColorBrush(Color.FromRgb(229, 9, 20)),
                 ProcessingState.Completed => new SolidColorBrush(Color.FromRgb(0, 230, 118)),
-                ProcessingState.Error => new SolidColorBrush(Color.FromRgb(255, 23, 68)),
+                ProcessingState.Error => new SolidColorBrush(Color.FromRgb(229, 9, 20)),
                 _ => new SolidColorBrush(Color.FromRgb(85, 92, 110))
             };
         }

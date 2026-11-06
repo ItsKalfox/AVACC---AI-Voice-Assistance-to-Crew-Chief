@@ -20,6 +20,9 @@ public class SettingsViewModel : ObservableObject
     private readonly IPushToTalkService _pttService;
     private readonly ISoundEffectService? _soundEffectService;
 
+    private bool _hasUnsavedChanges;
+    private bool _isLoadingSettings;
+
     // Architecture
     private bool _isSimpleMode = true;
     private bool _isAdvancedMode = false;
@@ -334,6 +337,31 @@ public class SettingsViewModel : ObservableObject
         set => SetProperty(ref _enableAiErrorSound, value);
     }
 
+    public bool HasUnsavedChanges
+    {
+        get => _hasUnsavedChanges;
+        set
+        {
+            if (SetProperty(ref _hasUnsavedChanges, value))
+            {
+                OnPropertyChanged(nameof(SaveSettingsStatusText));
+                OnPropertyChanged(nameof(SaveSettingsStatusColor));
+                OnPropertyChanged(nameof(SaveSettingsButtonText));
+                SaveSettingsCommand?.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string SaveSettingsStatusText => HasUnsavedChanges
+        ? "● Unsaved configuration changes detected — click Save to apply"
+        : "✓ All configuration settings are saved";
+
+    public string SaveSettingsStatusColor => HasUnsavedChanges ? "#E50914" : "#767D8E";
+
+    public string SaveSettingsButtonText => HasUnsavedChanges
+        ? "Save All Settings"
+        : "Settings Saved";
+
     public AudioDeviceInfo? SelectedAudioDevice
     {
         get => _selectedAudioDevice;
@@ -491,52 +519,61 @@ public class SettingsViewModel : ObservableObject
         RefreshAudioDevicesCommand = new AsyncRelayCommand(RefreshAudioDevicesAsync);
         RefreshPlaybackDevicesCommand = new AsyncRelayCommand(RefreshPlaybackDevicesAsync);
         TestCrewChiefBridgeCommand = new AsyncRelayCommand(TestCrewChiefBridgeAsync);
-        SaveSettingsCommand = new AsyncRelayCommand(SaveAllSettingsAsync);
+        SaveSettingsCommand = new AsyncRelayCommand(SaveAllSettingsAsync, () => HasUnsavedChanges);
 
         LoadInitialSettings();
     }
 
     private void LoadInitialSettings()
     {
-        var s = _settingsService.CurrentSettings;
-        IsSimpleMode = s.ArchitectureMode == ProcessingArchitectureMode.Simple;
-        SelectedProvider = s.SimpleProvider;
-        SelectedModel = s.SimpleModel;
+        _isLoadingSettings = true;
+        try
+        {
+            var s = _settingsService.CurrentSettings;
+            IsSimpleMode = s.ArchitectureMode == ProcessingArchitectureMode.Simple;
+            SelectedProvider = s.SimpleProvider;
+            SelectedModel = s.SimpleModel;
 
-        SelectedSttProvider = s.SttProvider;
-        SelectedSttModel = s.SttModel;
-        SelectedLlmProvider = s.LlmProvider;
-        SelectedLlmModel = s.LlmModel;
+            SelectedSttProvider = s.SttProvider;
+            SelectedSttModel = s.SttModel;
+            SelectedLlmProvider = s.LlmProvider;
+            SelectedLlmModel = s.LlmModel;
 
-        PttKey = s.PttKey;
-        IsGlobalPtt = s.IsGlobalPttEnabled;
-        DisablePttWhenInactive = s.DisablePttWhenInactive;
-        MaxRecordingDuration = s.MaxRecordingDurationSeconds;
-        VoiceActivityDetection = s.VoiceActivityDetectionEnabled;
-        NoiseSuppression = s.NoiseSuppressionEnabled;
-        OptimizePromptPayload = s.OptimizePromptPayload;
+            PttKey = s.PttKey;
+            IsGlobalPtt = s.IsGlobalPttEnabled;
+            DisablePttWhenInactive = s.DisablePttWhenInactive;
+            MaxRecordingDuration = s.MaxRecordingDurationSeconds;
+            VoiceActivityDetection = s.VoiceActivityDetectionEnabled;
+            NoiseSuppression = s.NoiseSuppressionEnabled;
+            OptimizePromptPayload = s.OptimizePromptPayload;
 
-        EnablePttStartSound = s.EnablePttStartSound;
-        EnablePttEndSound = s.EnablePttEndSound;
-        EnableDidntUnderstandSound = s.EnableDidntUnderstandSound;
-        SelectedChiefVoicePersona = string.IsNullOrEmpty(s.SelectedChiefVoicePersona) ? "Auto-Detect" : s.SelectedChiefVoicePersona;
-        EnableAiErrorSound = s.EnableAiErrorSound;
-        PttSoundVolume = s.PttSoundVolume;
+            EnablePttStartSound = s.EnablePttStartSound;
+            EnablePttEndSound = s.EnablePttEndSound;
+            EnableDidntUnderstandSound = s.EnableDidntUnderstandSound;
+            SelectedChiefVoicePersona = string.IsNullOrEmpty(s.SelectedChiefVoicePersona) ? "Auto-Detect" : s.SelectedChiefVoicePersona;
+            EnableAiErrorSound = s.EnableAiErrorSound;
+            PttSoundVolume = s.PttSoundVolume;
 
-        SampleRate = s.AudioSampleRate;
-        InputBoost = s.InputLevelBoost;
+            SampleRate = s.AudioSampleRate;
+            InputBoost = s.InputLevelBoost;
 
-        EnableCrewChiefBridge = s.EnableCrewChiefBridge;
-        AutoSendToCrewChief = s.AutoSendToCrewChief;
-        CrewChiefPttKey = s.CrewChiefPttKey;
-        TtsSpeechRate = s.TtsSpeechRate;
+            EnableCrewChiefBridge = s.EnableCrewChiefBridge;
+            AutoSendToCrewChief = s.AutoSendToCrewChief;
+            CrewChiefPttKey = s.CrewChiefPttKey;
+            TtsSpeechRate = s.TtsSpeechRate;
 
-        _ = CheckExistingKeyAsync();
-        _ = RefreshModelsAsync();
-        _ = RefreshSttModelsAsync();
-        _ = RefreshLlmModelsAsync();
-        _ = RefreshAudioDevicesAsync();
-        _ = RefreshPlaybackDevicesAsync();
+            _ = CheckExistingKeyAsync();
+            _ = RefreshModelsAsync();
+            _ = RefreshSttModelsAsync();
+            _ = RefreshLlmModelsAsync();
+            _ = RefreshAudioDevicesAsync();
+            _ = RefreshPlaybackDevicesAsync();
+        }
+        finally
+        {
+            _isLoadingSettings = false;
+            HasUnsavedChanges = false;
+        }
     }
 
     public async Task CheckExistingKeyAsync()
@@ -829,7 +866,26 @@ public class SettingsViewModel : ObservableObject
 
         _pttService.UpdateConfiguration(PttKey, IsGlobalPtt, DisablePttWhenInactive);
         await _settingsService.SaveSettingsAsync(s);
+        HasUnsavedChanges = false;
         _eventLogService.LogInfo("All configuration settings saved.");
+    }
+
+    protected override void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+        if (!_isLoadingSettings &&
+            propertyName != nameof(HasUnsavedChanges) &&
+            propertyName != nameof(SaveSettingsStatusText) &&
+            propertyName != nameof(SaveSettingsStatusColor) &&
+            propertyName != nameof(SaveSettingsButtonText) &&
+            propertyName != nameof(ConnectionTestStatus) &&
+            propertyName != nameof(AudioTestStatus) &&
+            propertyName != nameof(IsListeningForPttKey) &&
+            propertyName != nameof(PttKeyButtonText) &&
+            propertyName != nameof(TestAudioBridgeButtonText))
+        {
+            HasUnsavedChanges = true;
+        }
     }
 }
 

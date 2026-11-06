@@ -13,29 +13,37 @@
             <converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
-            <!-- Color Palette -->
-            <SolidColorBrush x:Key="BgDarkBrush" Color="#0E0F12" />
-            <SolidColorBrush x:Key="PanelBgBrush" Color="#16181D" />
-            <SolidColorBrush x:Key="CardBgBrush" Color="#1C1E25" />
-            <SolidColorBrush x:Key="CardBorderBrush" Color="#2B2F3A" />
-            <SolidColorBrush x:Key="InputBgBrush" Color="#121317" />
-            <SolidColorBrush x:Key="InputBorderBrush" Color="#343946" />
+            <!-- Color Palette: Red, Silver, Black Motorsport Theme -->
+            <SolidColorBrush x:Key="BgDarkBrush" Color="#0A0B0E" />
+            <SolidColorBrush x:Key="PanelBgBrush" Color="#121316" />
+            <SolidColorBrush x:Key="CardBgBrush" Color="#17181D" />
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#282A33" />
+            <SolidColorBrush x:Key="InputBgBrush" Color="#0E0F12" />
+            <SolidColorBrush x:Key="InputBorderBrush" Color="#323540" />
 
-            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2F4F7" />
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#949BAC" />
-            <SolidColorBrush x:Key="TextMutedBrush" Color="#5A6173" />
+            <!-- Silver / Platinum Text Hierarchy -->
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F5F6F8" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#C5CBD5" />
+            <SolidColorBrush x:Key="TextMutedBrush" Color="#767D8E" />
 
-            <SolidColorBrush x:Key="AccentCyanBrush" Color="#00E5FF" />
-            <SolidColorBrush x:Key="AccentCyanDimBrush" Color="#1A00E5FF" />
+            <!-- Red & Silver Brand Accents (From AVACC Logo) -->
+            <SolidColorBrush x:Key="AccentRedBrush" Color="#E50914" />
+            <SolidColorBrush x:Key="AccentRedHoverBrush" Color="#F30D14" />
+            <SolidColorBrush x:Key="AccentRedDimBrush" Color="#25E50914" />
+            <SolidColorBrush x:Key="AccentSilverBrush" Color="#D1D5DB" />
+            <SolidColorBrush x:Key="AccentSilverBrightBrush" Color="#FFFFFF" />
+
+            <!-- Aliases for compatibility -->
+            <SolidColorBrush x:Key="AccentCyanBrush" Color="#E50914" />
+            <SolidColorBrush x:Key="AccentCyanDimBrush" Color="#25E50914" />
             <SolidColorBrush x:Key="AccentAmberBrush" Color="#FFAB00" />
             <SolidColorBrush x:Key="AccentGreenBrush" Color="#00E676" />
-            <SolidColorBrush x:Key="AccentRedBrush" Color="#FF1744" />
 
             <!-- ScrollBar Brushes -->
-            <SolidColorBrush x:Key="ScrollBarTrackBrush" Color="#101115" />
-            <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#333844" />
-            <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#4B5366" />
-            <SolidColorBrush x:Key="ScrollBarThumbDraggingBrush" Color="#00E5FF" />
+            <SolidColorBrush x:Key="ScrollBarTrackBrush" Color="#0E0F12" />
+            <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#2E323D" />
+            <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#4A4F5F" />
+            <SolidColorBrush x:Key="ScrollBarThumbDraggingBrush" Color="#E50914" />
 
             <!-- Global TextBlock Style -->
             <Style TargetType="TextBlock">
@@ -48,14 +56,14 @@
                 <Setter Property="Background" Value="{StaticResource CardBgBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="CornerRadius" Value="3" />
                 <Setter Property="Padding" Value="14" />
             </Style>
 
             <Style x:Key="CardHeaderStyle" TargetType="TextBlock">
-                <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="FontSize" Value="12" />
-                <Setter Property="Foreground" Value="{StaticResource AccentCyanBrush}" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="Foreground" Value="{StaticResource AccentSilverBrightBrush}" />
                 <Setter Property="Margin" Value="0,0,0,10" />
             </Style>
 
@@ -261,16 +269,16 @@
                             <Border x:Name="border" Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                    CornerRadius="3" Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentCyanBrush}" />
-                                    <Setter TargetName="border" Property="Background" Value="#252832" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentRedBrush}" />
+                                    <Setter TargetName="border" Property="Background" Value="#22242D" />
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="border" Property="Background" Value="#1C1E25" />
+                                    <Setter TargetName="border" Property="Background" Value="#17181D" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Opacity" Value="0.4" />
@@ -282,9 +290,35 @@
             </Style>
 
             <Style x:Key="AccentButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-                <Setter Property="Background" Value="#00838F" />
-                <Setter Property="BorderBrush" Value="{StaticResource AccentCyanBrush}" />
+                <Setter Property="Background" Value="#D30C13" />
+                <Setter Property="BorderBrush" Value="{StaticResource AccentRedBrush}" />
                 <Setter Property="Foreground" Value="#FFFFFF" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="3" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#FF2B34" />
+                                    <Setter TargetName="border" Property="Background" Value="#E50914" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#B70810" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="border" Property="Opacity" Value="0.35" />
+                                    <Setter TargetName="border" Property="Background" Value="#1C1E24" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#282A33" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="OutlineButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">

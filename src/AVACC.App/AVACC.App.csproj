@@ -8,8 +8,16 @@
     <UseWPF>true</UseWPF>
     <LangVersion>latest</LangVersion>
     <ApplicationTitle>AVACC — AI Voice Assistance to Crew Chief</ApplicationTitle>
+    <ApplicationIcon>Assets\AVACC-icon.ico</ApplicationIcon>
     <RootNamespace>AVACC.App</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\**\*.*" />
+    <Content Include="Assets\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AVACC.Core\AVACC.Core.csproj" />

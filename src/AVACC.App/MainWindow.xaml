@@ -7,7 +7,8 @@
         xmlns:views="clr-namespace:AVACC.App.Views"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=viewmodels:MainViewModel}"
-        Title="AVACC — AI Voice Assistance to Crew Chief (v0.1 Preview)" 
+        Title="AVACC — AI Voice Assistance to Crew Chief" 
+        Icon="pack://application:,,,/Assets/AVACC-icon.png"
         Height="840" Width="1240" MinHeight="700" MinWidth="980"
         Background="{StaticResource BgDarkBrush}"
         WindowStartupLocation="CenterScreen">
@@ -26,7 +27,7 @@
 
         <!-- 1. TOP APP HEADER -->
         <Border Grid.Row="0" Background="{StaticResource PanelBgBrush}" BorderBrush="{StaticResource CardBorderBrush}" 
-                BorderThickness="0,0,0,1" Padding="18,12">
+                BorderThickness="0,0,0,1" Padding="18,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -34,42 +35,44 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <!-- App Branding -->
+                <!-- App Branding with Logo -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="AVACC" FontSize="18" FontWeight="Black" FontFamily="Segoe UI, Segoe UI Variable" 
-                               Foreground="{StaticResource AccentCyanBrush}" Margin="0,0,8,0" />
-                    <Border Background="#1C212B" CornerRadius="3" Padding="6,2" VerticalAlignment="Center" Margin="0,0,10,0">
-                        <TextBlock Text="v0.0.1-beta" FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentAmberBrush}" />
-                    </Border>
-                    <TextBlock Text="AI Voice Assistance to Crew Chief" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                    <Image Source="pack://application:,,,/Assets/AVACC-logo.png" Height="36" Stretch="Uniform" 
+                           RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,14,0" VerticalAlignment="Center" />
+                    <Border Height="20" Width="1" Background="{StaticResource CardBorderBrush}" Margin="0,0,14,0" VerticalAlignment="Center" />
+                    <TextBlock Text="AI VOICE ASSISTANCE TO CREW CHIEF" FontSize="11" FontWeight="Bold" 
+                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Active Model & Mode Indicator -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="#121418" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10,4">
-                        <TextBlock Text="{Binding ActiveProviderInfo}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <Border Background="#0E0F12" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="12,5">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="AI ENGINE: " FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding ActiveProviderInfo}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </StackPanel>
                     </Border>
                 </StackPanel>
 
                 <!-- Header Right Status Elements -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Crew Chief Process Badge & Launch -->
-                    <Border Background="{Binding CrewChiefStateBackground}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="10,5" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <!-- Crew Chief Process Status Gauge -->
+                    <Border Background="{Binding CrewChiefStateBackground}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="10,5" VerticalAlignment="Center" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center"
-                                     Fill="{Binding CrewChiefStateColor}" />
-                            <TextBlock Text="{Binding CrewChiefStatusDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                            <Rectangle Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center"
+                                       Fill="{Binding CrewChiefStateColor}" />
+                            <TextBlock Text="{Binding CrewChiefStatusDisplay}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
                     <Button Command="{Binding LaunchCrewChiefCommand}" 
                             Visibility="{Binding CanLaunchCrewChief, Converter={StaticResource BooleanToVisibilityConverter}}"
-                            Content="Launch" Margin="0,0,12,0" Padding="8,3" FontSize="10" Style="{StaticResource ModernButtonStyle}" VerticalAlignment="Center" />
+                            Content="LAUNCH" Margin="0,0,10,0" Padding="8,4" FontSize="10" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" VerticalAlignment="Center" />
 
-                    <!-- PTT Live State Pill -->
-                    <Border Background="#14171E" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12,5" VerticalAlignment="Center">
+                    <!-- PTT Live State Gauge -->
+                    <Border Background="#121316" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="12,5" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
-                                     Fill="{Binding VisualCMD.CurrentState, Converter={StaticResource StateToColorConverter}}" />
+                            <Rectangle Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                       Fill="{Binding VisualCMD.CurrentState, Converter={StaticResource StateToColorConverter}}" />
                             <TextBlock Text="{Binding OverallStatus}" FontSize="11" FontWeight="Bold" FontFamily="Cascadia Code, Consolas" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
@@ -82,18 +85,19 @@
                 BorderThickness="0,0,0,1" Padding="18,0">
             <StackPanel Orientation="Horizontal">
                 <!-- Tab 1: Visual CMD -->
-                <RadioButton Content="01  VISUAL CMD" IsChecked="{Binding SelectedTabIndex, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=0}"
+                <RadioButton Content="VISUAL CMD" IsChecked="{Binding SelectedTabIndex, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=0}"
                              Command="{Binding SelectTabCommand}" CommandParameter="0"
                              GroupName="NavTabs" Style="{x:Null}">
                     <RadioButton.Template>
                         <ControlTemplate TargetType="RadioButton">
-                            <Border x:Name="tabBorder" Background="Transparent" BorderThickness="0,0,0,2" BorderBrush="Transparent" Padding="18,12" Cursor="Hand">
+                            <Border x:Name="tabBorder" Background="Transparent" BorderThickness="0,0,0,3" BorderBrush="Transparent" Padding="20,12" Cursor="Hand">
                                 <TextBlock x:Name="tabText" Text="{TemplateBinding Content}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource AccentCyanBrush}" />
-                                    <Setter TargetName="tabText" Property="Foreground" Value="{StaticResource AccentCyanBrush}" />
+                                    <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource AccentRedBrush}" />
+                                    <Setter TargetName="tabText" Property="Foreground" Value="{StaticResource AccentSilverBrightBrush}" />
+                                    <Setter TargetName="tabText" Property="FontWeight" Value="Bold" />
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="tabText" Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
@@ -104,18 +108,19 @@
                 </RadioButton>
 
                 <!-- Tab 2: Command Editor -->
-                <RadioButton Content="02  COMMAND EDITOR" IsChecked="{Binding SelectedTabIndex, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=1}"
+                <RadioButton Content="COMMAND EDITOR" IsChecked="{Binding SelectedTabIndex, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=1}"
                              Command="{Binding SelectTabCommand}" CommandParameter="1"
                              GroupName="NavTabs" Style="{x:Null}">
                     <RadioButton.Template>
                         <ControlTemplate TargetType="RadioButton">
-                            <Border x:Name="tabBorder" Background="Transparent" BorderThickness="0,0,0,2" BorderBrush="Transparent" Padding="18,12" Cursor="Hand">
+                            <Border x:Name="tabBorder" Background="Transparent" BorderThickness="0,0,0,3" BorderBrush="Transparent" Padding="20,12" Cursor="Hand">
                                 <TextBlock x:Name="tabText" Text="{TemplateBinding Content}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource AccentCyanBrush}" />
-                                    <Setter TargetName="tabText" Property="Foreground" Value="{StaticResource AccentCyanBrush}" />
+                                    <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource AccentRedBrush}" />
+                                    <Setter TargetName="tabText" Property="Foreground" Value="{StaticResource AccentSilverBrightBrush}" />
+                                    <Setter TargetName="tabText" Property="FontWeight" Value="Bold" />
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="tabText" Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
@@ -126,18 +131,19 @@
                 </RadioButton>
 
                 <!-- Tab 3: Settings -->
-                <RadioButton Content="03  SETTINGS" IsChecked="{Binding SelectedTabIndex, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=2}"
+                <RadioButton Content="SETTINGS" IsChecked="{Binding SelectedTabIndex, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=2}"
                              Command="{Binding SelectTabCommand}" CommandParameter="2"
                              GroupName="NavTabs" Style="{x:Null}">
                     <RadioButton.Template>
                         <ControlTemplate TargetType="RadioButton">
-                            <Border x:Name="tabBorder" Background="Transparent" BorderThickness="0,0,0,2" BorderBrush="Transparent" Padding="18,12" Cursor="Hand">
+                            <Border x:Name="tabBorder" Background="Transparent" BorderThickness="0,0,0,3" BorderBrush="Transparent" Padding="20,12" Cursor="Hand">
                                 <TextBlock x:Name="tabText" Text="{TemplateBinding Content}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource AccentCyanBrush}" />
-                                    <Setter TargetName="tabText" Property="Foreground" Value="{StaticResource AccentCyanBrush}" />
+                                    <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource AccentRedBrush}" />
+                                    <Setter TargetName="tabText" Property="Foreground" Value="{StaticResource AccentSilverBrightBrush}" />
+                                    <Setter TargetName="tabText" Property="FontWeight" Value="Bold" />
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="tabText" Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />

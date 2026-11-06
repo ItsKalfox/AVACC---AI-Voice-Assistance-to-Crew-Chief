@@ -133,14 +133,14 @@
                         </Grid>
 
                         <!-- Suggested Command Badge & Action -->
-                        <Border Background="#0C1B24" CornerRadius="6" Padding="12" Margin="0,0,0,10" BorderBrush="{StaticResource AccentCyanBrush}" BorderThickness="1">
+                        <Border Background="#191012" CornerRadius="3" Padding="12" Margin="0,0,0,10" BorderBrush="{StaticResource AccentRedBrush}" BorderThickness="1">
                             <StackPanel>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="SUGGESTION" FontSize="9" FontWeight="Bold" Foreground="{StaticResource AccentCyanBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="0" Text="SUGGESTION" FontSize="9" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}" VerticalAlignment="Center" />
                                     
                                     <!-- Send to Crew Chief Action Button -->
                                     <Button Grid.Column="1" Command="{Binding SendCommandToCrewChiefCommand}" 
@@ -154,12 +154,12 @@
                                 </Grid>
 
                                 <TextBlock Text="{Binding SuggestedCommandId, FallbackValue='AWAITING_COMMAND'}" 
-                                           FontSize="15" FontWeight="Bold" FontFamily="Cascadia Code, Consolas" Foreground="#00E5FF" TextWrapping="Wrap" />
+                                           FontSize="15" FontWeight="Bold" FontFamily="Cascadia Code, Consolas" Foreground="{StaticResource AccentSilverBrightBrush}" TextWrapping="Wrap" />
                                 <TextBlock Text="{Binding SuggestedCommandDescription}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" 
                                            Margin="0,6,0,0" TextWrapping="Wrap" Visibility="{Binding SuggestedCommandDescription, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
 
                                 <!-- Canonical trigger phrase & Send status -->
-                                <Border Margin="0,8,0,0" Padding="8,5" Background="#081016" CornerRadius="4" 
+                                <Border Margin="0,8,0,0" Padding="8,5" Background="#120B0D" CornerRadius="2" 
                                         Visibility="{Binding CanSendToCrewChief, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>

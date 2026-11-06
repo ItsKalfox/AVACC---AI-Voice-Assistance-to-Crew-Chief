@@ -196,7 +196,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Mapped Command:" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
                                     <TextBlock Grid.Column="1" Text="{Binding TestResultSuggestedCommand, FallbackValue='(Enter sentence and click Test)'}" 
-                                               FontSize="12" FontWeight="Bold" FontFamily="Cascadia Code, Consolas" Foreground="{StaticResource AccentCyanBrush}" />
+                                               FontSize="12" FontWeight="Bold" FontFamily="Cascadia Code, Consolas" Foreground="{StaticResource AccentRedBrush}" />
                                 </Grid>
 
                                 <Grid Margin="0,0,0,4">
@@ -230,7 +230,7 @@
               Visibility="{Binding IsImportingCsv, Converter={StaticResource BooleanToVisibilityConverter}}"
               Panel.ZIndex="100">
             <Border Width="960" Height="580" Style="{StaticResource CardStyle}" 
-                    Background="#16181D" BorderBrush="{StaticResource AccentCyanBrush}" BorderThickness="1"
+                    Background="#16181D" BorderBrush="{StaticResource AccentRedBrush}" BorderThickness="1"
                     Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -248,7 +248,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="IMPORT COMMANDS FROM CSV — PREVIEW &amp; EDIT" Style="{StaticResource CardHeaderStyle}" Margin="0" />
                         <TextBlock Grid.Column="1" Text="{Binding StagedImportCommands.Count, StringFormat='{}{0} commands loaded'}" 
-                                   FontSize="11" Foreground="{StaticResource AccentCyanBrush}" FontWeight="SemiBold" />
+                                   FontSize="11" Foreground="{StaticResource AccentSilverBrightBrush}" FontWeight="SemiBold" />
                     </Grid>
 
                     <TextBlock Grid.Row="1" Text="Review and edit the parsed commands before adding them to your registry. You can edit cells directly or deselect commands you do not want to import."
