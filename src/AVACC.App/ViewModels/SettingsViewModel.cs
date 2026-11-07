@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using Microsoft.Win32;
 using AVACC.Core.Commands;
 using AVACC.Core.Configuration;
 using AVACC.Core.Interfaces;
@@ -94,6 +95,8 @@ public class SettingsViewModel : ObservableObject
 
     private bool _enableCrewChiefBridge = true;
     private bool _autoSendToCrewChief = true;
+    private bool _autoLaunchCrewChiefOnStartup;
+    private string _customCrewChiefPath = string.Empty;
     private AudioDeviceInfo? _selectedPlaybackDevice;
     private string _crewChiefPttKey = "None";
     private int _ttsSpeechRate = 2;
@@ -398,6 +401,18 @@ public class SettingsViewModel : ObservableObject
         set => SetProperty(ref _autoSendToCrewChief, value);
     }
 
+    public bool AutoLaunchCrewChiefOnStartup
+    {
+        get => _autoLaunchCrewChiefOnStartup;
+        set => SetProperty(ref _autoLaunchCrewChiefOnStartup, value);
+    }
+
+    public string CustomCrewChiefPath
+    {
+        get => _customCrewChiefPath;
+        set => SetProperty(ref _customCrewChiefPath, value);
+    }
+
     public AudioDeviceInfo? SelectedPlaybackDevice
     {
         get => _selectedPlaybackDevice;
@@ -449,6 +464,7 @@ public class SettingsViewModel : ObservableObject
     public AsyncRelayCommand RefreshAudioDevicesCommand { get; }
     public AsyncRelayCommand RefreshPlaybackDevicesCommand { get; }
     public AsyncRelayCommand TestCrewChiefBridgeCommand { get; }
+    public RelayCommand BrowseCrewChiefPathCommand { get; }
     public AsyncRelayCommand SaveSettingsCommand { get; }
     public RelayCommand RecordPttKeyCommand { get; }
     public RelayCommand ResetPttKeyToDefaultCommand { get; }
@@ -519,6 +535,7 @@ public class SettingsViewModel : ObservableObject
         RefreshAudioDevicesCommand = new AsyncRelayCommand(RefreshAudioDevicesAsync);
         RefreshPlaybackDevicesCommand = new AsyncRelayCommand(RefreshPlaybackDevicesAsync);
         TestCrewChiefBridgeCommand = new AsyncRelayCommand(TestCrewChiefBridgeAsync);
+        BrowseCrewChiefPathCommand = new RelayCommand(BrowseCrewChiefPath);
         SaveSettingsCommand = new AsyncRelayCommand(SaveAllSettingsAsync, () => HasUnsavedChanges);
 
         LoadInitialSettings();
@@ -559,6 +576,10 @@ public class SettingsViewModel : ObservableObject
 
             EnableCrewChiefBridge = s.EnableCrewChiefBridge;
             AutoSendToCrewChief = s.AutoSendToCrewChief;
+            AutoLaunchCrewChiefOnStartup = s.AutoLaunchCrewChiefOnStartup;
+            CustomCrewChiefPath = !string.IsNullOrEmpty(s.CustomCrewChiefPath)
+                ? s.CustomCrewChiefPath
+                : (_crewChiefMonitor.ExecutablePath ?? string.Empty);
             CrewChiefPttKey = s.CrewChiefPttKey;
             TtsSpeechRate = s.TtsSpeechRate;
 
@@ -855,6 +876,8 @@ public class SettingsViewModel : ObservableObject
         // Crew Chief settings
         s.EnableCrewChiefBridge = EnableCrewChiefBridge;
         s.AutoSendToCrewChief = AutoSendToCrewChief;
+        s.AutoLaunchCrewChiefOnStartup = AutoLaunchCrewChiefOnStartup;
+        s.CustomCrewChiefPath = string.IsNullOrWhiteSpace(CustomCrewChiefPath) ? null : CustomCrewChiefPath.Trim();
         s.CrewChiefPttKey = CrewChiefPttKey;
         s.TtsSpeechRate = TtsSpeechRate;
 
@@ -868,6 +891,21 @@ public class SettingsViewModel : ObservableObject
         await _settingsService.SaveSettingsAsync(s);
         HasUnsavedChanges = false;
         _eventLogService.LogInfo("All configuration settings saved.");
+    }
+
+    private void BrowseCrewChiefPath()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "Crew Chief Executable (CrewChiefV4.exe)|CrewChiefV4.exe|Executable Files (*.exe)|*.exe",
+            Title = "Select Crew Chief Executable",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            CustomCrewChiefPath = dialog.FileName;
+        }
     }
 
     protected override void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)

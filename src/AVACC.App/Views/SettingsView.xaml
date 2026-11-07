@@ -168,7 +168,24 @@
 
                         <CheckBox Content="Automatically push recognized commands to Crew Chief" 
                                   IsChecked="{Binding AutoSendToCrewChief}" 
-                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="20,0,0,10" />
+                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="20,0,0,8" />
+
+                        <CheckBox Content="Automatically launch Crew Chief alongside AVACC on startup" 
+                                  IsChecked="{Binding AutoLaunchCrewChiefOnStartup}" 
+                                  Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                        <TextBlock Text="When AVACC starts, Crew Chief will automatically launch ready for your session." 
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="20,0,0,10" />
+
+                        <TextBlock Text="Crew Chief Executable Path (CrewChiefV4.exe):" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding CustomCrewChiefPath, UpdateSourceTrigger=PropertyChanged}" Height="28" Padding="6,4"
+                                     VerticalContentAlignment="Center" Margin="0,0,6,0" />
+                            <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseCrewChiefPathCommand}" Style="{StaticResource ModernButtonStyle}" Padding="10,4" />
+                        </Grid>
 
                         <TextBlock Text="Target Audio Device (Virtual Cable for Crew Chief Input):" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
                         <ComboBox ItemsSource="{Binding AvailablePlaybackDevices}" SelectedItem="{Binding SelectedPlaybackDevice}" Height="28" Margin="0,0,0,10" />

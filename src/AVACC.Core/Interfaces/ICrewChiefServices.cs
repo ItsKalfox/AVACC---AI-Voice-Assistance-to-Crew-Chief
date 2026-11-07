@@ -13,6 +13,7 @@ public interface ICrewChiefMonitorService
 {
     CrewChiefConnectionState State { get; }
     bool IsRunning { get; }
+    bool IsSessionActive { get; }
     string StatusDisplay { get; }
     string? ExecutablePath { get; }
 
@@ -21,6 +22,9 @@ public interface ICrewChiefMonitorService
     void StartMonitoring();
     void StopMonitoring();
     Task<bool> LaunchCrewChiefAsync();
+    Task<bool> StartCrewChiefSessionAsync();
+    Task<bool> StopCrewChiefSessionAsync();
+    Task<bool> ToggleCrewChiefSessionAsync();
 }
 
 public interface ICrewChiefBridgeService

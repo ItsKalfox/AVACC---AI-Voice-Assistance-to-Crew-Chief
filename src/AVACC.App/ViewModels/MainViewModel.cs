@@ -28,6 +28,10 @@ public class MainViewModel : ObservableObject
     private string _crewChiefStateBackground = "#1F1215";
     private bool _isCrewChiefRunning;
     private bool _canLaunchCrewChief = true;
+    private bool _isCrewChiefSessionActive;
+    private bool _canToggleCrewChiefSession;
+    private string _sessionButtonText = "START CREW CHIEF";
+    private string _sessionButtonBackground = "#00E676";
     private string _crewChiefBridgeStatusText = "Crew Chief Audio Bridge: Initializing...";
 
     public VisualCMDViewModel VisualCMD { get; }
@@ -88,6 +92,30 @@ public class MainViewModel : ObservableObject
         set => SetProperty(ref _canLaunchCrewChief, value);
     }
 
+    public bool IsCrewChiefSessionActive
+    {
+        get => _isCrewChiefSessionActive;
+        set => SetProperty(ref _isCrewChiefSessionActive, value);
+    }
+
+    public bool CanToggleCrewChiefSession
+    {
+        get => _canToggleCrewChiefSession;
+        set => SetProperty(ref _canToggleCrewChiefSession, value);
+    }
+
+    public string SessionButtonText
+    {
+        get => _sessionButtonText;
+        set => SetProperty(ref _sessionButtonText, value);
+    }
+
+    public string SessionButtonBackground
+    {
+        get => _sessionButtonBackground;
+        set => SetProperty(ref _sessionButtonBackground, value);
+    }
+
     public string CrewChiefBridgeStatusText
     {
         get => _crewChiefBridgeStatusText;
@@ -96,6 +124,7 @@ public class MainViewModel : ObservableObject
 
     public RelayCommand<object> SelectTabCommand { get; }
     public AsyncRelayCommand LaunchCrewChiefCommand { get; }
+    public AsyncRelayCommand ToggleCrewChiefSessionCommand { get; }
 
     public MainViewModel(
         VisualCMDViewModel visualCmdVm,
@@ -139,10 +168,24 @@ public class MainViewModel : ObservableObject
             if (!launched)
             {
                 MessageBox.Show(
-                    "Could not automatically locate CrewChiefV4.exe in default Program Files folders.\nPlease launch Crew Chief manually.",
+                    "Could not automatically locate CrewChiefV4.exe in default Program Files folders.\nPlease check or configure your Crew Chief path in Settings.",
                     "Crew Chief Launch",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
+            }
+        });
+
+        ToggleCrewChiefSessionCommand = new AsyncRelayCommand(async () =>
+        {
+            _eventLogService.LogInfo("Toggling Crew Chief session state...");
+            var success = await _crewChiefMonitor.ToggleCrewChiefSessionAsync();
+            if (!success)
+            {
+                MessageBox.Show(
+                    "Could not interact with Crew Chief window. Make sure Crew Chief is running.",
+                    "Crew Chief Session",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
         });
 
@@ -449,6 +492,19 @@ public class MainViewModel : ObservableObject
             var s = _settingsService.CurrentSettings;
             IsCrewChiefRunning = state != CrewChiefConnectionState.NotRunning;
             CanLaunchCrewChief = !IsCrewChiefRunning;
+            CanToggleCrewChiefSession = IsCrewChiefRunning;
+            IsCrewChiefSessionActive = state == CrewChiefConnectionState.Active;
+
+            if (IsCrewChiefSessionActive)
+            {
+                SessionButtonText = "STOP CREW CHIEF";
+                SessionButtonBackground = "#D50000"; // Racing red for stop
+            }
+            else
+            {
+                SessionButtonText = "START CREW CHIEF";
+                SessionButtonBackground = "#00C853"; // Green for start
+            }
 
             switch (state)
             {
@@ -458,7 +514,7 @@ public class MainViewModel : ObservableObject
                     CrewChiefStateBackground = "#0D2518";
                     break;
                 case CrewChiefConnectionState.Running:
-                    CrewChiefStatusDisplay = "Crew Chief: Running";
+                    CrewChiefStatusDisplay = "Crew Chief: Running (Idle)";
                     CrewChiefStateColor = "#00E5FF";
                     CrewChiefStateBackground = "#0B2228";
                     break;

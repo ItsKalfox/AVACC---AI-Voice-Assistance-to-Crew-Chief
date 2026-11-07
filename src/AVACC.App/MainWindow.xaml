@@ -77,9 +77,22 @@
                                 <TextBlock Text="{Binding CrewChiefStatusDisplay}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
+                        <!-- Launch Crew Chief Button (Visible when offline) -->
                         <Button Command="{Binding LaunchCrewChiefCommand}" 
                                 Visibility="{Binding CanLaunchCrewChief, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                Content="LAUNCH" Margin="0,0,10,0" Padding="8,4" FontSize="10" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" VerticalAlignment="Center" />
+                                Content="LAUNCH CREW CHIEF" Margin="0,0,8,0" Padding="10,5" FontSize="10" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" VerticalAlignment="Center" />
+
+                        <!-- Start / Stop Crew Chief Session Button (Visible when process is running) -->
+                        <Button Command="{Binding ToggleCrewChiefSessionCommand}" 
+                                Visibility="{Binding CanToggleCrewChiefSession, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                Content="{Binding SessionButtonText}" Margin="0,0,8,0" Padding="10,5" FontSize="10" FontWeight="Bold"
+                                Background="{Binding SessionButtonBackground}" Foreground="#FFFFFF" BorderThickness="0" Cursor="Hand" VerticalAlignment="Center">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="2" />
+                                </Style>
+                            </Button.Resources>
+                        </Button>
 
                         <!-- PTT Live State Gauge -->
                         <Border Background="#E60A0B0E" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="12,6" VerticalAlignment="Center">

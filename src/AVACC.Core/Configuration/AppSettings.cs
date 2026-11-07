@@ -56,6 +56,8 @@ public class AppSettings
     // Crew Chief Integration Bridge
     public bool EnableCrewChiefBridge { get; set; } = true;
     public bool AutoSendToCrewChief { get; set; } = true;
+    public bool AutoLaunchCrewChiefOnStartup { get; set; } = false;
+    public string? CustomCrewChiefPath { get; set; }
     public string? CrewChiefAudioOutputDeviceId { get; set; }
     public string? CrewChiefAudioOutputDeviceName { get; set; }
     public string CrewChiefPttKey { get; set; } = "None";

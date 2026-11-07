@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Crew Chief Process Remote Controller & Execution:**
+  - Added launch capability to [`CrewChiefMonitorService`](file:///c:/Projects/AVACC---AI-Voice-Assistance-to-Crew-Chief/src/AVACC.Infrastructure/CrewChiefMonitorService.cs), starting `CrewChiefV4.exe` alongside AVACC.
+  - Added `Start Crew Chief` / `Stop Crew Chief` remote toggle button directly in the main top bar, emulating Win32 `BM_CLICK` on Crew Chief's native start button.
+  - Added real-time session button tracking to detect whether Crew Chief is actively monitoring telemetry or idle.
+  - Added `Auto-launch Crew Chief alongside AVACC on startup` toggle in Settings.
+  - Added configurable Crew Chief Executable Path with auto-detection and file browser in Settings.
+- **Dynamic Fuel & Amount Parameter Extraction (`CrewChiefPhraseHelper`):**
+  - Expanded parameter extraction in [`CrewChiefPhraseHelper`](file:///c:/Projects/AVACC---AI-Voice-Assistance-to-Crew-Chief/src/AVACC.Core/Helpers/CrewChiefPhraseHelper.cs) to recognize volume units (`litres`, `liters`, `l`, `gallons`), standalone amounts (`30`, `50`, `55`, `70`), and compound number words (`fifty-five`, `sixty-four`).
+  - Added British English normalization converting any occurrence of `liters` / `liter` to `litres` / `litre`, strictly adhering to Crew Chief's speech recognition dictionary.
 - **Comprehensive Crew Chief Commands Dataset (`CrewChief_All_Commands.csv`):**
   - Generated full dataset of 271 Crew Chief commands extracted directly from official `speech_recognition_config.txt` documentation.
   - Complete coverage across 14 categories: `Tyres`, `Brakes`, `Powertrain`, `Damage`, `Fuel`, `Timing`, `Gaps`, `Session`, `Pitstop`, `Comms`, `Display`, `Opponents`, `Rally`, and `General`.

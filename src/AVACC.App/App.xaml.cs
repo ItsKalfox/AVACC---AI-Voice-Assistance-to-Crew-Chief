@@ -65,6 +65,16 @@ public partial class App : Application
         var crewChiefMonitor = _serviceProvider.GetRequiredService<ICrewChiefMonitorService>();
         crewChiefMonitor.StartMonitoring();
 
+        // Auto-launch Crew Chief alongside AVACC if enabled
+        if (settings.AutoLaunchCrewChiefOnStartup && !crewChiefMonitor.IsRunning)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(800);
+                await crewChiefMonitor.LaunchCrewChiefAsync();
+            });
+        }
+
         // Show MainWindow
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();

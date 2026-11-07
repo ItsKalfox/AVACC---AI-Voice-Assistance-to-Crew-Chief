@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using AVACC.Core.Interfaces;
 
 namespace AVACC.Infrastructure;
@@ -7,13 +9,16 @@ namespace AVACC.Infrastructure;
 public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
 {
     private readonly IEventLogService _eventLogService;
+    private readonly ISettingsService _settingsService;
     private readonly System.Timers.Timer _timer;
     private CrewChiefConnectionState _state = CrewChiefConnectionState.NotRunning;
     private string? _executablePath;
+    private bool _isSessionActive;
     private bool _disposed;
 
     public CrewChiefConnectionState State => _state;
     public bool IsRunning => _state != CrewChiefConnectionState.NotRunning;
+    public bool IsSessionActive => _isSessionActive;
     public string? ExecutablePath => _executablePath;
 
     public string StatusDisplay => _state switch
@@ -25,9 +30,39 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
 
     public event EventHandler<CrewChiefConnectionState>? StateChanged;
 
-    public CrewChiefMonitorService(IEventLogService eventLogService)
+    #region Win32 Interop
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+    private delegate bool EnumChildDelegate(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumChildWindows(IntPtr hWndParent, EnumChildDelegate lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    private const uint BM_CLICK = 0x00F5;
+    private const int SW_RESTORE = 9;
+    #endregion
+
+    public CrewChiefMonitorService(IEventLogService eventLogService, ISettingsService settingsService)
     {
         _eventLogService = eventLogService;
+        _settingsService = settingsService;
         _timer = new System.Timers.Timer(2000); // Check every 2 seconds
         _timer.Elapsed += (s, e) => CheckCrewChiefProcess();
         _timer.AutoReset = true;
@@ -48,16 +83,11 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
     {
         try
         {
-            var processes = Process.GetProcessesByName("CrewChiefV4");
-            if (processes.Length == 0)
-            {
-                processes = Process.GetProcessesByName("CrewChief");
-            }
-
+            var proc = GetCrewChiefProcess();
             CrewChiefConnectionState newState;
-            if (processes.Length > 0)
+
+            if (proc != null)
             {
-                var proc = processes[0];
                 try
                 {
                     _executablePath = proc.MainModule?.FileName;
@@ -67,22 +97,42 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
                     // Ignore access exception if elevated
                 }
 
-                // Check if main window title contains "started" or session indicators
-                var title = proc.MainWindowTitle;
-                if (!string.IsNullOrWhiteSpace(title) && 
-                    (title.Contains("running", StringComparison.OrdinalIgnoreCase) || 
-                     title.Contains("started", StringComparison.OrdinalIgnoreCase)))
+                // Check button state first
+                var btn = FindSessionButton(proc.Id, out var btnText);
+                if (btn != IntPtr.Zero)
                 {
-                    newState = CrewChiefConnectionState.Active;
+                    if (btnText.IndexOf("Stop", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _isSessionActive = true;
+                        newState = CrewChiefConnectionState.Active;
+                    }
+                    else
+                    {
+                        _isSessionActive = false;
+                        newState = CrewChiefConnectionState.Running;
+                    }
                 }
                 else
                 {
-                    // Process is running
-                    newState = CrewChiefConnectionState.Running;
+                    // Fallback to window title
+                    var title = proc.MainWindowTitle;
+                    if (!string.IsNullOrWhiteSpace(title) &&
+                        (title.Contains("running", StringComparison.OrdinalIgnoreCase) ||
+                         title.Contains("started", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _isSessionActive = true;
+                        newState = CrewChiefConnectionState.Active;
+                    }
+                    else
+                    {
+                        _isSessionActive = false;
+                        newState = CrewChiefConnectionState.Running;
+                    }
                 }
             }
             else
             {
+                _isSessionActive = false;
                 newState = CrewChiefConnectionState.NotRunning;
             }
 
@@ -100,6 +150,14 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
                 {
                     _eventLogService.LogInfo($"Crew Chief detected ({StatusDisplay}).");
                 }
+                else if (_state == CrewChiefConnectionState.Active && previousState == CrewChiefConnectionState.Running)
+                {
+                    _eventLogService.LogInfo("Crew Chief session started.");
+                }
+                else if (_state == CrewChiefConnectionState.Running && previousState == CrewChiefConnectionState.Active)
+                {
+                    _eventLogService.LogInfo("Crew Chief session stopped.");
+                }
             }
         }
         catch (Exception ex)
@@ -112,17 +170,25 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
     {
         try
         {
-            string? launchPath = _executablePath;
+            string? launchPath = _settingsService.CurrentSettings.CustomCrewChiefPath;
+
+            if (string.IsNullOrEmpty(launchPath) || !File.Exists(launchPath))
+            {
+                launchPath = _executablePath;
+            }
 
             if (string.IsNullOrEmpty(launchPath) || !File.Exists(launchPath))
             {
                 // Common default installation locations
                 var candidatePaths = new[]
                 {
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Britton IT Ltd", "CrewChiefV4", "CrewChiefV4.exe"),
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Britton IT Ltd", "Crew Chief V4", "CrewChiefV4.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Britton IT Ltd", "CrewChiefV4", "CrewChiefV4.exe"),
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Britton IT Ltd", "Crew Chief V4", "CrewChiefV4.exe"),
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "CrewChiefV4", "CrewChiefV4.exe"),
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "CrewChiefV4", "CrewChiefV4.exe"),
+                    @"C:\Program Files (x86)\Britton IT Ltd\CrewChiefV4\CrewChiefV4.exe",
                     @"C:\Program Files (x86)\Britton IT Ltd\Crew Chief V4\CrewChiefV4.exe"
                 };
 
@@ -131,7 +197,7 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
 
             if (string.IsNullOrEmpty(launchPath))
             {
-                _eventLogService.LogWarning("Could not automatically locate CrewChiefV4.exe. Please launch Crew Chief manually.");
+                _eventLogService.LogWarning("Could not automatically locate CrewChiefV4.exe. Please specify path in Settings.");
                 return Task.FromResult(false);
             }
 
@@ -139,7 +205,8 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
             {
                 FileName = launchPath,
                 UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(launchPath)
+                WorkingDirectory = Path.GetDirectoryName(launchPath),
+                WindowStyle = ProcessWindowStyle.Normal
             };
 
             Process.Start(startInfo);
@@ -152,6 +219,137 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
             _eventLogService.LogError($"Failed to launch Crew Chief: {ex.Message}");
             return Task.FromResult(false);
         }
+    }
+
+    public Task<bool> StartCrewChiefSessionAsync()
+    {
+        return Task.Run(() =>
+        {
+            var proc = GetCrewChiefProcess();
+            if (proc == null)
+            {
+                _eventLogService.LogWarning("Cannot start Crew Chief session: Crew Chief process is not running.");
+                return false;
+            }
+
+            // If window is minimized, restore it so controls can receive messages
+            try
+            {
+                if (proc.MainWindowHandle != IntPtr.Zero && IsIconic(proc.MainWindowHandle))
+                {
+                    ShowWindow(proc.MainWindowHandle, SW_RESTORE);
+                    Thread.Sleep(200);
+                }
+            }
+            catch { }
+
+            var btn = FindSessionButton(proc.Id, out var btnText);
+            if (btn == IntPtr.Zero)
+            {
+                _eventLogService.LogWarning("Could not locate Crew Chief Start button.");
+                return false;
+            }
+
+            if (btnText.IndexOf("Start", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                SendMessage(btn, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+                _eventLogService.LogInfo("Triggered 'Start Crew Chief' session.");
+                CheckCrewChiefProcess();
+                return true;
+            }
+
+            _eventLogService.LogInfo("Crew Chief session is already active.");
+            return true;
+        });
+    }
+
+    public Task<bool> StopCrewChiefSessionAsync()
+    {
+        return Task.Run(() =>
+        {
+            var proc = GetCrewChiefProcess();
+            if (proc == null) return false;
+
+            // If window is minimized, restore it so controls can receive messages
+            try
+            {
+                if (proc.MainWindowHandle != IntPtr.Zero && IsIconic(proc.MainWindowHandle))
+                {
+                    ShowWindow(proc.MainWindowHandle, SW_RESTORE);
+                    Thread.Sleep(200);
+                }
+            }
+            catch { }
+
+            var btn = FindSessionButton(proc.Id, out var btnText);
+            if (btn == IntPtr.Zero) return false;
+
+            if (btnText.IndexOf("Stop", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                SendMessage(btn, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+                _eventLogService.LogInfo("Triggered 'Stop Crew Chief' session.");
+                CheckCrewChiefProcess();
+                return true;
+            }
+
+            return true;
+        });
+    }
+
+    public async Task<bool> ToggleCrewChiefSessionAsync()
+    {
+        if (_isSessionActive)
+        {
+            return await StopCrewChiefSessionAsync();
+        }
+        else
+        {
+            return await StartCrewChiefSessionAsync();
+        }
+    }
+
+    private static Process? GetCrewChiefProcess()
+    {
+        var processes = Process.GetProcessesByName("CrewChiefV4");
+        if (processes.Length == 0)
+        {
+            processes = Process.GetProcessesByName("CrewChief");
+        }
+        return processes.FirstOrDefault();
+    }
+
+    private static IntPtr FindSessionButton(int pid, out string buttonText)
+    {
+        IntPtr foundBtn = IntPtr.Zero;
+        string foundTxt = string.Empty;
+
+        EnumWindows((h, l) =>
+        {
+            uint p;
+            GetWindowThreadProcessId(h, out p);
+            if (p == pid)
+            {
+                EnumChildWindows(h, (ch, cl) =>
+                {
+                    var sb = new StringBuilder(256);
+                    GetWindowText(ch, sb, 256);
+                    var txt = sb.ToString();
+                    if (!string.IsNullOrWhiteSpace(txt) &&
+                        (txt.IndexOf("Start Crew Chief", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         txt.IndexOf("Stop", StringComparison.OrdinalIgnoreCase) >= 0))
+                    {
+                        foundBtn = ch;
+                        foundTxt = txt.Trim();
+                        return false;
+                    }
+                    return true;
+                }, IntPtr.Zero);
+            }
+            return foundBtn == IntPtr.Zero;
+        }, IntPtr.Zero);
+
+        buttonText = foundTxt;
+        return foundBtn;
     }
 
     public void Dispose()

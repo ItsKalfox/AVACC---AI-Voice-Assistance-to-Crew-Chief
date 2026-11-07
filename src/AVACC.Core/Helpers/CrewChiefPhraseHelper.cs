@@ -58,7 +58,41 @@ public static class CrewChiefPhraseHelper
         ["seventeenth"] = 17, ["17th"] = 17, ["seventeen"] = 17,
         ["eighteenth"] = 18, ["18th"] = 18, ["eighteen"] = 18,
         ["nineteenth"] = 19, ["19th"] = 19, ["nineteen"] = 19,
-        ["twentieth"] = 20, ["20th"] = 20, ["twenty"] = 20
+        ["twentieth"] = 20, ["20th"] = 20, ["twenty"] = 20,
+        ["thirty"] = 30, ["thirtieth"] = 30, ["30th"] = 30,
+        ["forty"] = 40, ["fourty"] = 40, ["fortieth"] = 40, ["fourtieth"] = 40, ["40th"] = 40,
+        ["fifty"] = 50, ["fiftieth"] = 50, ["50th"] = 50,
+        ["sixty"] = 60, ["sixtieth"] = 60, ["60th"] = 60,
+        ["seventy"] = 70, ["seventieth"] = 70, ["70th"] = 70,
+        ["eighty"] = 80, ["eightieth"] = 80, ["80th"] = 80,
+        ["ninety"] = 90, ["ninetieth"] = 90, ["90th"] = 90,
+        ["hundred"] = 100, ["one-hundred"] = 100, ["one hundred"] = 100, ["100th"] = 100
+    };
+
+    private static readonly Dictionary<string, int> TensWordsMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["twenty"] = 20,
+        ["thirty"] = 30,
+        ["forty"] = 40,
+        ["fourty"] = 40,
+        ["fifty"] = 50,
+        ["sixty"] = 60,
+        ["seventy"] = 70,
+        ["eighty"] = 80,
+        ["ninety"] = 90
+    };
+
+    private static readonly Dictionary<string, int> OnesWordsMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["one"] = 1,
+        ["two"] = 2,
+        ["three"] = 3,
+        ["four"] = 4,
+        ["five"] = 5,
+        ["six"] = 6,
+        ["seven"] = 7,
+        ["eight"] = 8,
+        ["nine"] = 9
     };
 
     public static string NumberToWord(int number)
@@ -133,7 +167,11 @@ public static class CrewChiefPhraseHelper
                     }
                     var amountWord = amount.HasValue ? NumberToWord(amount.Value) : "twenty";
                     result = Regex.Replace(result, @"\{amount\}", amountWord, RegexOptions.IgnoreCase);
-                    result = Regex.Replace(result, @"\{unit\}", unit ?? "laps", RegexOptions.IgnoreCase);
+
+                    var defaultUnit = result.Contains("fuel", StringComparison.OrdinalIgnoreCase) || transcript.Contains("fuel", StringComparison.OrdinalIgnoreCase)
+                        ? "litres"
+                        : "laps";
+                    result = Regex.Replace(result, @"\{unit\}", unit ?? defaultUnit, RegexOptions.IgnoreCase);
                 }
 
                 // Check for named driver templates: {driver}
@@ -150,17 +188,17 @@ public static class CrewChiefPhraseHelper
                     result = Regex.Replace(result, @"\{time\}", timeSpec, RegexOptions.IgnoreCase);
                 }
 
-                return FormatDigitsToWords(result);
+                return NormalizeCrewChiefBritishTerms(FormatDigitsToWords(result));
             }
 
             // Static voice line configured by user or registry (guarantee exact canonical phrase)
-            return FormatDigitsToWords(template);
+            return NormalizeCrewChiefBritishTerms(FormatDigitsToWords(template));
         }
 
         // 2. If no voice line template is configured, fallback to LLM's spoken phrase or canonical ID
         if (!string.IsNullOrWhiteSpace(spokenPhrase))
         {
-            return FormatDigitsToWords(spokenPhrase.Trim());
+            return NormalizeCrewChiefBritishTerms(FormatDigitsToWords(spokenPhrase.Trim()));
         }
 
         return (commandId ?? string.Empty).Replace('_', ' ').ToLowerInvariant();
@@ -204,65 +242,94 @@ public static class CrewChiefPhraseHelper
         return null;
     }
 
+    private const string FuelUnitPattern = @"litres?|liters?|l\b|gallons?|gals?|laps?|minutes?|mins?|hours?|hrs?|kilograms?|kilos?|kg\b|pounds?|lbs?\b";
+
+    public static string NormalizeCrewChiefBritishTerms(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return input;
+        // Crew Chief speech recognition grammar expects British spelling: "litres" not "liters"
+        var result = Regex.Replace(input, @"\bliters\b", "litres", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, @"\bliter\b", "litre", RegexOptions.IgnoreCase);
+        return result;
+    }
+
+    private static string NormalizeUnit(string rawUnit)
+    {
+        var lower = rawUnit.ToLowerInvariant();
+        if (lower.StartsWith("lit") || lower == "l") return "litres";
+        if (lower.StartsWith("gal")) return "gallons";
+        if (lower.StartsWith("lap")) return "laps";
+        if (lower.StartsWith("hour") || lower.StartsWith("hr")) return "hours";
+        if (lower.StartsWith("min")) return "minutes";
+        if (lower.StartsWith("k") || lower.StartsWith("kg")) return "kilograms";
+        if (lower.StartsWith("pound") || lower.StartsWith("lb")) return "pounds";
+        return lower;
+    }
+
     public static (int? Amount, string? Unit) ExtractFuelCalculationParameters(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return (null, null);
 
-        var match = Regex.Match(text, @"(\d{1,3})\s*(laps?|minutes?|mins?|hours?|hrs?)", RegexOptions.IgnoreCase);
+        // 1. Digits followed by unit (e.g. "50 liters", "55 litres", "20 laps", "10 gallons")
+        var match = Regex.Match(text, @"(\d{1,3})\s*(" + FuelUnitPattern + @")", RegexOptions.IgnoreCase);
         if (match.Success && int.TryParse(match.Groups[1].Value, out var amt))
         {
-            var rawUnit = match.Groups[2].Value.ToLowerInvariant();
-            var unit = rawUnit.StartsWith("lap") ? "laps" : (rawUnit.StartsWith("hour") || rawUnit.StartsWith("hr") ? "hours" : "minutes");
+            var unit = NormalizeUnit(match.Groups[2].Value);
             return (amt, unit);
         }
 
-        // Check for compound number words like "twenty-five laps", "thirty two minutes"
-        var compoundMatch = Regex.Match(text, @"\b(twenty|thirty|fourty|forty|fifty|sixty|seventy|eighty|ninety)[-\s]+(one|two|three|four|five|six|seven|eight|nine)\s+(laps?|minutes?|mins?|hours?|hrs?)\b", RegexOptions.IgnoreCase);
+        // 2. Compound number words followed by unit (e.g. "twenty-five laps", "fifty five liters", "sixty-four litres")
+        var compoundMatch = Regex.Match(text, @"\b(twenty|thirty|fourty|forty|fifty|sixty|seventy|eighty|ninety)[-\s]+(one|two|three|four|five|six|seven|eight|nine)\s*(" + FuelUnitPattern + @")", RegexOptions.IgnoreCase);
         if (compoundMatch.Success)
         {
-            var tensWord = compoundMatch.Groups[1].Value.ToLowerInvariant();
-            var unitsWord = compoundMatch.Groups[2].Value.ToLowerInvariant();
-            var rawUnit = compoundMatch.Groups[3].Value.ToLowerInvariant();
-
-            int tensVal = tensWord switch
-            {
-                "twenty" => 20,
-                "thirty" => 30,
-                "fourty" or "forty" => 40,
-                "fifty" => 50,
-                "sixty" => 60,
-                "seventy" => 70,
-                "eighty" => 80,
-                "ninety" => 90,
-                _ => 0
-            };
-            int unitVal = unitsWord switch
-            {
-                "one" => 1,
-                "two" => 2,
-                "three" => 3,
-                "four" => 4,
-                "five" => 5,
-                "six" => 6,
-                "seven" => 7,
-                "eight" => 8,
-                "nine" => 9,
-                _ => 0
-            };
-            var unit = rawUnit.StartsWith("lap") ? "laps" : (rawUnit.StartsWith("hour") || rawUnit.StartsWith("hr") ? "hours" : "minutes");
-            return (tensVal + unitVal, unit);
+            var tensVal = TensWordsMap.TryGetValue(compoundMatch.Groups[1].Value, out var tv) ? tv : 0;
+            var unitsVal = OnesWordsMap.TryGetValue(compoundMatch.Groups[2].Value, out var uv) ? uv : 0;
+            var unit = NormalizeUnit(compoundMatch.Groups[3].Value);
+            return (tensVal + unitsVal, unit);
         }
 
-        // Check for words like "twenty laps", "fifteen minutes" (avoid matching suffix of hyphenated numbers)
-        foreach (var kvp in WordToNumberMap)
+        // 3. Single number words followed by unit (e.g. "fifty litres", "sixty liters", "ten laps", "twenty minutes")
+        foreach (var kvp in WordToNumberMap.OrderByDescending(k => k.Key.Length))
         {
-            var wordMatch = Regex.Match(text, $@"(?<![-\w]){kvp.Key}\s+(laps?|minutes?|mins?|hours?|hrs?)\b", RegexOptions.IgnoreCase);
+            var wordMatch = Regex.Match(text, $@"(?<![-\w]){kvp.Key}\s+(" + FuelUnitPattern + @")", RegexOptions.IgnoreCase);
             if (wordMatch.Success)
             {
-                var rawUnit = wordMatch.Groups[1].Value.ToLowerInvariant();
-                var unit = rawUnit.StartsWith("lap") ? "laps" : (rawUnit.StartsWith("hour") || rawUnit.StartsWith("hr") ? "hours" : "minutes");
+                var unit = NormalizeUnit(wordMatch.Groups[1].Value);
                 return (kvp.Value, unit);
             }
+        }
+
+        // 4. Standalone compound number words without unit (e.g. "add fifty-five", "pit stop add thirty-two")
+        var standaloneCompoundMatch = Regex.Match(text, @"\b(twenty|thirty|fourty|forty|fifty|sixty|seventy|eighty|ninety)[-\s]+(one|two|three|four|five|six|seven|eight|nine)\b", RegexOptions.IgnoreCase);
+        if (standaloneCompoundMatch.Success)
+        {
+            var tensVal = TensWordsMap.TryGetValue(standaloneCompoundMatch.Groups[1].Value, out var tv) ? tv : 0;
+            var unitsVal = OnesWordsMap.TryGetValue(standaloneCompoundMatch.Groups[2].Value, out var uv) ? uv : 0;
+            return (tensVal + unitsVal, null);
+        }
+
+        // 5. Action words followed by number words (e.g. "add fifty", "put in sixty", "pit stop add thirty")
+        foreach (var kvp in WordToNumberMap.OrderByDescending(k => k.Key.Length))
+        {
+            var actionWordMatch = Regex.Match(text, $@"\b(?:add|fuel|put in|box|load|fill|pitstop|pit stop)\s+(?:about|roughly)?\s*{kvp.Key}\b", RegexOptions.IgnoreCase);
+            if (actionWordMatch.Success)
+            {
+                return (kvp.Value, null);
+            }
+        }
+
+        // 6. Action words followed by digits (e.g. "add 50", "box add 55", "pit stop add 60")
+        var actionDigitMatch = Regex.Match(text, @"\b(?:add|fuel|put in|box|load|fill|pitstop|pit stop)\s+(?:about|roughly|more)?\s*(\d{1,3})\b", RegexOptions.IgnoreCase);
+        if (actionDigitMatch.Success && int.TryParse(actionDigitMatch.Groups[1].Value, out var actionAmt))
+        {
+            return (actionAmt, null);
+        }
+
+        // 7. Fallback: any standalone 1-3 digit number not preceded by position identifiers (e.g. "please add 50 in pit stop menu")
+        var standaloneDigitMatch = Regex.Match(text, @"(?<!\b(?:p|pos|position)\s*[-#]?)\b(\d{1,3})\b", RegexOptions.IgnoreCase);
+        if (standaloneDigitMatch.Success && int.TryParse(standaloneDigitMatch.Groups[1].Value, out var standaloneAmt))
+        {
+            return (standaloneAmt, null);
         }
 
         return (null, null);

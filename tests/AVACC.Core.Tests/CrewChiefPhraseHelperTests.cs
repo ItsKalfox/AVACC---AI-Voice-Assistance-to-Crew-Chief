@@ -49,7 +49,17 @@ public class CrewChiefPhraseHelperTests
     [InlineData("how much fuel for 45 minutes", 45, "minutes")]
     [InlineData("fuel for 1 hour", 1, "hours")]
     [InlineData("calculate fuel for twenty-five laps", 25, "laps")]
-    public void ExtractFuelCalculationParameters_ExtractsAmountAndUnit(string text, int expectedAmount, string expectedUnit)
+    [InlineData("add 55 liters", 55, "litres")]
+    [InlineData("add 55 litres", 55, "litres")]
+    [InlineData("please add 50 liters in the pit stop menu", 50, "litres")]
+    [InlineData("add 60 liters", 60, "litres")]
+    [InlineData("add 70 litres", 70, "litres")]
+    [InlineData("add 30 liters", 30, "litres")]
+    [InlineData("add fifty-five liters", 55, "litres")]
+    [InlineData("add sixty litres", 60, "litres")]
+    [InlineData("pit stop add 40", 40, null)]
+    [InlineData("add 35", 35, null)]
+    public void ExtractFuelCalculationParameters_ExtractsAmountAndUnit(string text, int expectedAmount, string? expectedUnit)
     {
         var (amount, unit) = CrewChiefPhraseHelper.ExtractFuelCalculationParameters(text);
         Assert.Equal(expectedAmount, amount);
@@ -116,6 +126,42 @@ public class CrewChiefPhraseHelperTests
 
         var resolved = CrewChiefPhraseHelper.ResolvePhrase("DONT_TALK_IN_THE_CORNERS", llmSpokenPhrase, transcript, template);
         Assert.Equal("don't talk in the corners", resolved);
+    }
+
+    [Fact]
+    public void ResolvePhrase_ResolvesPitStopAddFuel_NormalizingToBritishLitres()
+    {
+        // Even if user's configured template uses American spelling "liters",
+        // it must resolve to British "litres" which Crew Chief speech recognition expects
+        var template = "Add Fuel, {amount} liters";
+        var transcript = "Please add 55 liters in the pit stop menu";
+
+        var resolved = CrewChiefPhraseHelper.ResolvePhrase("PIT_STOP_ADD", null, transcript, template);
+        Assert.Equal("Add Fuel, fifty-five litres", resolved);
+    }
+
+    [Theory]
+    [InlineData("Add Fuel, 50 liters", "Add Fuel, 50 litres")]
+    [InlineData("Pit stop add 60 liters", "Pit stop add 60 litres")]
+    [InlineData("calculate fuel for 30 liters", "calculate fuel for 30 litres")]
+    public void NormalizeCrewChiefBritishTerms_ConvertsAmericanLitersToLitres(string input, string expected)
+    {
+        var actual = CrewChiefPhraseHelper.NormalizeCrewChiefBritishTerms(input);
+        Assert.Equal(expected, actual);
+    }
+
+    [Theory]
+    [InlineData("Please add 50 liters in the pit stop menu", "Add Fuel, fifty litres")]
+    [InlineData("Add 55 liters", "Add Fuel, fifty-five litres")]
+    [InlineData("Add 60 litres", "Add Fuel, sixty litres")]
+    [InlineData("Pit stop add 70 liters", "Add Fuel, seventy litres")]
+    [InlineData("Add 30", "Add Fuel, thirty litres")]
+    [InlineData("Add fifty-five litres", "Add Fuel, fifty-five litres")]
+    public void ResolvePhrase_ResolvesVariousPitStopFuelAmounts(string transcript, string expectedPhrase)
+    {
+        var template = "Add Fuel, {amount} litres";
+        var resolved = CrewChiefPhraseHelper.ResolvePhrase("PIT_STOP_ADD", null, transcript, template);
+        Assert.Equal(expectedPhrase, resolved);
     }
 
     [Fact]
