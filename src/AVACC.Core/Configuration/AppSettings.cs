@@ -57,6 +57,9 @@ public class AppSettings
     public bool EnableCrewChiefBridge { get; set; } = true;
     public bool AutoSendToCrewChief { get; set; } = true;
     public bool AutoLaunchCrewChiefOnStartup { get; set; } = false;
+    public bool AutoSwitchCrewChiefInputDeviceOnLaunch { get; set; } = true;
+    public string? CrewChiefInputDeviceId { get; set; }
+    public string? CrewChiefInputDeviceName { get; set; }
     public string? CustomCrewChiefPath { get; set; }
     public string? CrewChiefAudioOutputDeviceId { get; set; }
     public string? CrewChiefAudioOutputDeviceName { get; set; }

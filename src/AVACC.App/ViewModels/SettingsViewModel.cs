@@ -96,6 +96,8 @@ public class SettingsViewModel : ObservableObject
     private bool _enableCrewChiefBridge = true;
     private bool _autoSendToCrewChief = true;
     private bool _autoLaunchCrewChiefOnStartup;
+    private bool _autoSwitchCrewChiefInputDeviceOnLaunch = true;
+    private AudioDeviceInfo? _selectedCrewChiefInputDevice;
     private string _customCrewChiefPath = string.Empty;
     private AudioDeviceInfo? _selectedPlaybackDevice;
     private string _crewChiefPttKey = "None";
@@ -407,6 +409,26 @@ public class SettingsViewModel : ObservableObject
         set => SetProperty(ref _autoLaunchCrewChiefOnStartup, value);
     }
 
+    public bool AutoSwitchCrewChiefInputDeviceOnLaunch
+    {
+        get => _autoSwitchCrewChiefInputDeviceOnLaunch;
+        set
+        {
+            if (SetProperty(ref _autoSwitchCrewChiefInputDeviceOnLaunch, value))
+            {
+                OnPropertyChanged(nameof(IsCrewChiefInputDeviceSelectorEnabled));
+            }
+        }
+    }
+
+    public bool IsCrewChiefInputDeviceSelectorEnabled => AutoSwitchCrewChiefInputDeviceOnLaunch;
+
+    public AudioDeviceInfo? SelectedCrewChiefInputDevice
+    {
+        get => _selectedCrewChiefInputDevice;
+        set => SetProperty(ref _selectedCrewChiefInputDevice, value);
+    }
+
     public string CustomCrewChiefPath
     {
         get => _customCrewChiefPath;
@@ -577,6 +599,7 @@ public class SettingsViewModel : ObservableObject
             EnableCrewChiefBridge = s.EnableCrewChiefBridge;
             AutoSendToCrewChief = s.AutoSendToCrewChief;
             AutoLaunchCrewChiefOnStartup = s.AutoLaunchCrewChiefOnStartup;
+            AutoSwitchCrewChiefInputDeviceOnLaunch = s.AutoSwitchCrewChiefInputDeviceOnLaunch;
             CustomCrewChiefPath = !string.IsNullOrEmpty(s.CustomCrewChiefPath)
                 ? s.CustomCrewChiefPath
                 : (_crewChiefMonitor.ExecutablePath ?? string.Empty);
@@ -735,6 +758,20 @@ public class SettingsViewModel : ObservableObject
 
         SelectedAudioDevice ??= AvailableAudioDevices.FirstOrDefault(d => d.IsDefault)
             ?? AvailableAudioDevices.FirstOrDefault();
+
+        // Crew Chief Launch Input Device (suggest Virtual Cable Output if available)
+        if (!string.IsNullOrEmpty(s.CrewChiefInputDeviceId))
+        {
+            SelectedCrewChiefInputDevice = AvailableAudioDevices.FirstOrDefault(d => d.Id == s.CrewChiefInputDeviceId)
+                ?? AvailableAudioDevices.FirstOrDefault(d => d.Name == s.CrewChiefInputDeviceName);
+        }
+
+        if (SelectedCrewChiefInputDevice == null)
+        {
+            SelectedCrewChiefInputDevice = AvailableAudioDevices.FirstOrDefault(d => d.Name.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+                ?? AvailableAudioDevices.FirstOrDefault(d => d.IsDefault)
+                ?? AvailableAudioDevices.FirstOrDefault();
+        }
     }
 
     private Task RefreshPlaybackDevicesAsync()
@@ -884,6 +921,12 @@ public class SettingsViewModel : ObservableObject
         s.EnableCrewChiefBridge = EnableCrewChiefBridge;
         s.AutoSendToCrewChief = AutoSendToCrewChief;
         s.AutoLaunchCrewChiefOnStartup = AutoLaunchCrewChiefOnStartup;
+        s.AutoSwitchCrewChiefInputDeviceOnLaunch = AutoSwitchCrewChiefInputDeviceOnLaunch;
+        if (SelectedCrewChiefInputDevice != null)
+        {
+            s.CrewChiefInputDeviceId = SelectedCrewChiefInputDevice.Id;
+            s.CrewChiefInputDeviceName = SelectedCrewChiefInputDevice.Name;
+        }
         s.CustomCrewChiefPath = string.IsNullOrWhiteSpace(CustomCrewChiefPath) ? null : CustomCrewChiefPath.Trim();
         s.CrewChiefPttKey = CrewChiefPttKey;
         s.TtsSpeechRate = TtsSpeechRate;

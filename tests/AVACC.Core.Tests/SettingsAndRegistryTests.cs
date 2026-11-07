@@ -22,11 +22,15 @@ public class SettingsAndRegistryTests
             Assert.Equal("gemini-1.5-flash", loaded.SimpleModel);
             Assert.Equal("RightCtrl", loaded.PttKey);
             Assert.True(loaded.IsGlobalPttEnabled);
+            Assert.True(loaded.AutoSwitchCrewChiefInputDeviceOnLaunch);
 
             // Modify and save
             loaded.PttKey = "Space";
             loaded.MaxRecordingDurationSeconds = 15;
             loaded.ArchitectureMode = ProcessingArchitectureMode.Advanced;
+            loaded.AutoSwitchCrewChiefInputDeviceOnLaunch = false;
+            loaded.CrewChiefInputDeviceId = "test-cable-id";
+            loaded.CrewChiefInputDeviceName = "CABLE Output (VB-Audio Virtual Cable)";
             await service.SaveSettingsAsync(loaded);
 
             // Reload in new instance
@@ -36,6 +40,9 @@ public class SettingsAndRegistryTests
             Assert.Equal("Space", reloaded.PttKey);
             Assert.Equal(15, reloaded.MaxRecordingDurationSeconds);
             Assert.Equal(ProcessingArchitectureMode.Advanced, reloaded.ArchitectureMode);
+            Assert.False(reloaded.AutoSwitchCrewChiefInputDeviceOnLaunch);
+            Assert.Equal("test-cable-id", reloaded.CrewChiefInputDeviceId);
+            Assert.Equal("CABLE Output (VB-Audio Virtual Cable)", reloaded.CrewChiefInputDeviceName);
         }
         finally
         {

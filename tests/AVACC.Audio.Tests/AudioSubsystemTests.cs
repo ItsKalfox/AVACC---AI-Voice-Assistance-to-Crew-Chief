@@ -1,10 +1,48 @@
 using AVACC.Audio;
+using AVACC.Core.Configuration;
+using AVACC.Core.Interfaces;
 using Xunit;
 
 namespace AVACC.Audio.Tests;
 
 public class AudioSubsystemTests
 {
+    [Fact]
+    public void MicrophoneManager_Implements_IAudioEndpointService_AndRetrievesDefaultDevice()
+    {
+        var manager = new MicrophoneManager();
+        Assert.IsAssignableFrom<IAudioEndpointService>(manager);
+
+        var defaultDevice = manager.GetDefaultInputDevice();
+        // On systems with microphones, defaultDevice is non-null with valid Id
+        if (defaultDevice != null)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(defaultDevice.Id));
+            Assert.False(string.IsNullOrWhiteSpace(defaultDevice.Name));
+            Assert.True(defaultDevice.IsDefault);
+        }
+
+        // Setting empty/default should return false safely
+        Assert.False(manager.SetDefaultInputDevice(""));
+        Assert.False(manager.SetDefaultInputDevice("default"));
+    }
+
+    [Fact]
+    public void MicrophoneManager_ReconcileAudioDevices_ReconcilesCrewChiefInputDevice()
+    {
+        var manager = new MicrophoneManager();
+        var settings = new AppSettings
+        {
+            CrewChiefInputDeviceId = "non-existent-device-guid-12345",
+            CrewChiefInputDeviceName = "Disconnected Headset"
+        };
+
+        var changed = manager.ReconcileAudioDevices(settings, out var message);
+        Assert.True(changed);
+        Assert.False(string.IsNullOrWhiteSpace(settings.CrewChiefInputDeviceId));
+        Assert.NotEqual("non-existent-device-guid-12345", settings.CrewChiefInputDeviceId);
+        Assert.Contains("Crew Chief launch input device", message);
+    }
     [Fact]
     public void MicrophoneManager_EnumeratesDevices_OrReturnsSafeFallback()
     {

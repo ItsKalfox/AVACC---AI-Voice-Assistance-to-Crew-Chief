@@ -174,7 +174,19 @@
                                   IsChecked="{Binding AutoLaunchCrewChiefOnStartup}" 
                                   Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,4" />
                         <TextBlock Text="When AVACC starts, Crew Chief will automatically launch ready for your session." 
-                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="20,0,0,10" />
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="20,0,0,8" />
+
+                        <!-- Auto-Switch Windows Default Recording Device at Launch -->
+                        <CheckBox Content="Set Crew Chief input device at launch (auto-switch Windows default mic)" 
+                                  IsChecked="{Binding AutoSwitchCrewChiefInputDeviceOnLaunch}" 
+                                  Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                        <TextBlock Text="Temporarily switches Windows default recording device to your selected input before launch so Crew Chief binds to it, then automatically restores your headset microphone." 
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="20,0,0,6" />
+
+                        <StackPanel Margin="20,0,0,10" IsEnabled="{Binding IsCrewChiefInputDeviceSelectorEnabled}">
+                            <TextBlock Text="Crew Chief Launch Input Device (e.g. CABLE Output):" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
+                            <ComboBox ItemsSource="{Binding AvailableAudioDevices}" SelectedItem="{Binding SelectedCrewChiefInputDevice}" Height="28" />
+                        </StackPanel>
 
                         <TextBlock Text="Crew Chief Executable Path (CrewChiefV4.exe):" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
                         <Grid Margin="0,0,0,10">

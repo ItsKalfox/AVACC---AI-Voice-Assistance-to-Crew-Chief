@@ -1,11 +1,35 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using AVACC.Core.Configuration;
+using AVACC.Core.Interfaces;
 using AVACC.Core.Models;
 using NAudio.CoreAudioApi;
 
 namespace AVACC.Audio;
 
-public class MicrophoneManager
+public class MicrophoneManager : IAudioEndpointService
 {
+    #region COM PolicyConfig Interop
+    [ComImport, Guid("f8679f50-850a-41cf-9c72-430f290290c8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IPolicyConfig
+    {
+        [PreserveSig] int GetMixFormat(string pszDeviceName, IntPtr ppFormat);
+        [PreserveSig] int GetDeviceFormat(string pszDeviceName, int bFlow, IntPtr ppFormat);
+        [PreserveSig] int ResetDeviceFormat(string pszDeviceName);
+        [PreserveSig] int SetDeviceFormat(string pszDeviceName, IntPtr ppEndpointFormat, IntPtr ppMixFormat);
+        [PreserveSig] int GetProcessingPeriod(string pszDeviceName, int bDefault, IntPtr pPeriod, IntPtr pPeriodMin);
+        [PreserveSig] int SetProcessingPeriod(string pszDeviceName, IntPtr pPeriod);
+        [PreserveSig] int GetShareMode(string pszDeviceName, IntPtr pMode);
+        [PreserveSig] int SetShareMode(string pszDeviceName, IntPtr pMode);
+        [PreserveSig] int GetPropertyValue(string pszDeviceName, IntPtr pKey, IntPtr pv);
+        [PreserveSig] int SetPropertyValue(string pszDeviceName, IntPtr pKey, IntPtr pv);
+        [PreserveSig] int SetDefaultEndpoint([In, MarshalAs(UnmanagedType.LPWStr)] string wszDeviceId, int eRole);
+        [PreserveSig] int SetEndpointVisibility(string pszDeviceName, int bVisible);
+    }
+
+    [ComImport, Guid("870af99c-171d-4f9e-af0d-e63df40c2bc9")]
+    private class CPolicyConfigClient {}
+    #endregion
     public bool ReconcileAudioDevices(AppSettings settings, out string statusMessage)
     {
         var messages = new List<string>();
@@ -86,6 +110,28 @@ public class MicrophoneManager
                         settings.CrewChiefAudioOutputDeviceName = fallbackOut.Name;
                         changed = true;
                         messages.Add($"Crew Chief bridge output '{oldName}' is unavailable; switched to '{fallbackOut.Name}'");
+                    }
+                }
+            }
+
+            // 4. Reconcile Crew Chief Launch Input Device
+            if (!string.IsNullOrEmpty(settings.CrewChiefInputDeviceId))
+            {
+                var ccInMatch = activeInputs.FirstOrDefault(d => string.Equals(d.Id, settings.CrewChiefInputDeviceId, StringComparison.OrdinalIgnoreCase))
+                             ?? activeInputs.FirstOrDefault(d => string.Equals(d.Name, settings.CrewChiefInputDeviceName, StringComparison.OrdinalIgnoreCase));
+
+                if (ccInMatch == null)
+                {
+                    var fallbackIn = activeInputs.FirstOrDefault(d => d.Name.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+                                  ?? activeInputs.FirstOrDefault(d => d.IsDefault)
+                                  ?? activeInputs.FirstOrDefault();
+                    if (fallbackIn != null)
+                    {
+                        var oldName = settings.CrewChiefInputDeviceName ?? settings.CrewChiefInputDeviceId;
+                        settings.CrewChiefInputDeviceId = fallbackIn.Id;
+                        settings.CrewChiefInputDeviceName = fallbackIn.Name;
+                        changed = true;
+                        messages.Add($"Crew Chief launch input device '{oldName}' is unavailable; switched to '{fallbackIn.Name}'");
                     }
                 }
             }
@@ -223,5 +269,67 @@ public class MicrophoneManager
         }
 
         return devices;
+    }
+
+    public AudioDeviceInfo? GetDefaultInputDevice()
+    {
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            MMDevice? defaultDevice = null;
+            try
+            {
+                defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+            }
+            catch
+            {
+                try
+                {
+                    defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+                }
+                catch { }
+            }
+
+            if (defaultDevice != null)
+            {
+                return new AudioDeviceInfo
+                {
+                    Id = defaultDevice.ID,
+                    Name = defaultDevice.FriendlyName,
+                    IsDefault = true,
+                    Channels = 1,
+                    SampleRate = 16000
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MicrophoneManager] Failed to get default input device: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    public bool SetDefaultInputDevice(string deviceId)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId) || string.Equals(deviceId, "default", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        try
+        {
+            var client = (IPolicyConfig)new CPolicyConfigClient();
+            int hrConsole = client.SetDefaultEndpoint(deviceId, 0); // eConsole
+            int hrMultimedia = client.SetDefaultEndpoint(deviceId, 1); // eMultimedia
+            int hrComms = client.SetDefaultEndpoint(deviceId, 2); // eCommunications
+
+            return hrConsole == 0 || hrMultimedia == 0 || hrComms == 0;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MicrophoneManager] Failed to set default input device: {ex.Message}");
+            return false;
+        }
     }
 }

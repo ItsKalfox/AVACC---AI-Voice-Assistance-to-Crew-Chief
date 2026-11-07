@@ -98,19 +98,20 @@ public partial class App : Application
         // HTTP Client
         services.AddSingleton<HttpClient>();
 
+        // Audio
+        services.AddSingleton<MicrophoneManager>();
+        services.AddSingleton<IAudioEndpointService>(sp => sp.GetRequiredService<MicrophoneManager>());
+        services.AddSingleton<IAudioCaptureService, AudioCaptureService>();
+        services.AddSingleton<IPushToTalkService, PushToTalkService>();
+        services.AddSingleton<ISoundEffectService, SoundEffectService>();
+        services.AddSingleton<ICrewChiefBridgeService, CrewChiefBridgeService>();
+
         // Infrastructure
         services.AddSingleton<ISecureKeyStorage, SecureKeyStorage>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<ICommandRegistryService, CommandRegistryService>();
         services.AddSingleton<IEventLogService, EventLogService>();
         services.AddSingleton<ICrewChiefMonitorService, CrewChiefMonitorService>();
-
-        // Audio
-        services.AddSingleton<MicrophoneManager>();
-        services.AddSingleton<IAudioCaptureService, AudioCaptureService>();
-        services.AddSingleton<IPushToTalkService, PushToTalkService>();
-        services.AddSingleton<ISoundEffectService, SoundEffectService>();
-        services.AddSingleton<ICrewChiefBridgeService, CrewChiefBridgeService>();
 
         // AI Providers
         services.AddSingleton<GeminiProvider>();

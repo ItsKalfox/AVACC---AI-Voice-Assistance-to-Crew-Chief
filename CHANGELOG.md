@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Crew Chief Launch Audio Device Auto-Switching (`IAudioEndpointService`):**
+  - Added COM-level default audio endpoint control using Windows `IPolicyConfig` to seamlessly switch Windows default recording endpoint before launching Crew Chief and automatically restore the original microphone after launch.
+  - Added `AutoSwitchCrewChiefInputDeviceOnLaunch` setting (default: ON/enabled) in Settings.
+  - Added selectable `CrewChiefInputDeviceId` dropdown (enabled when the toggle is on) allowing users to select the exact capture device (e.g. `CABLE Output (VB-Audio Virtual Cable)`) that Crew Chief binds to at startup.
+  - Automatically switches the Windows recording device to the selected input (or VB Cable) prior to launch, launches `CrewChiefV4.exe`, waits 3 seconds for Crew Chief's Microsoft Speech Recognition engine to initialize and bind, then cleanly restores the original default microphone back to the user's headset.
+  - Added automatic audio device reconciliation for the Crew Chief launch input device in [`MicrophoneManager`](file:///c:/Projects/AVACC---AI-Voice-Assistance-to-Crew-Chief/src/AVACC.Audio/MicrophoneManager.cs).
 - **Automatic Audio Device Reconciliation & Disconnection Fallback:**
   - Added `ReconcileAudioDevices` to [`MicrophoneManager`](file:///c:/Projects/AVACC---AI-Voice-Assistance-to-Crew-Chief/src/AVACC.Audio/MicrophoneManager.cs) that detects unplugged or disconnected headsets, microphones, and output devices on application startup.
   - Automatically falls back to active system default devices and persists the new configuration to `settings.json`, preventing "mic error" failures when switching between headset and speakers/desktop mic.

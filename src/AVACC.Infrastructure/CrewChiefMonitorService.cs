@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using AVACC.Core.Interfaces;
+using AVACC.Core.Models;
 
 namespace AVACC.Infrastructure;
 
@@ -10,6 +11,7 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
 {
     private readonly IEventLogService _eventLogService;
     private readonly ISettingsService _settingsService;
+    private readonly IAudioEndpointService? _audioEndpointService;
     private readonly System.Timers.Timer _timer;
     private CrewChiefConnectionState _state = CrewChiefConnectionState.NotRunning;
     private string? _executablePath;
@@ -59,10 +61,14 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
     private const int SW_RESTORE = 9;
     #endregion
 
-    public CrewChiefMonitorService(IEventLogService eventLogService, ISettingsService settingsService)
+    public CrewChiefMonitorService(
+        IEventLogService eventLogService, 
+        ISettingsService settingsService,
+        IAudioEndpointService? audioEndpointService = null)
     {
         _eventLogService = eventLogService;
         _settingsService = settingsService;
+        _audioEndpointService = audioEndpointService;
         _timer = new System.Timers.Timer(2000); // Check every 2 seconds
         _timer.Elapsed += (s, e) => CheckCrewChiefProcess();
         _timer.AutoReset = true;
@@ -201,6 +207,47 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
                 return Task.FromResult(false);
             }
 
+            var settings = _settingsService.CurrentSettings;
+            AudioDeviceInfo? originalDefaultDevice = null;
+            bool didSwitchDevice = false;
+
+            if (settings.AutoSwitchCrewChiefInputDeviceOnLaunch && _audioEndpointService != null)
+            {
+                try
+                {
+                    var activeInputs = _audioEndpointService.GetInputDevices();
+                    AudioDeviceInfo? targetDevice = null;
+
+                    if (!string.IsNullOrEmpty(settings.CrewChiefInputDeviceId))
+                    {
+                        targetDevice = activeInputs.FirstOrDefault(d => string.Equals(d.Id, settings.CrewChiefInputDeviceId, StringComparison.OrdinalIgnoreCase))
+                                    ?? activeInputs.FirstOrDefault(d => string.Equals(d.Name, settings.CrewChiefInputDeviceName, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    if (targetDevice == null)
+                    {
+                        targetDevice = activeInputs.FirstOrDefault(d => d.Name.Contains("CABLE", StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    if (targetDevice != null)
+                    {
+                        originalDefaultDevice = _audioEndpointService.GetDefaultInputDevice();
+                        if (originalDefaultDevice != null && !string.Equals(originalDefaultDevice.Id, targetDevice.Id, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _eventLogService.LogInfo($"Temporarily setting Windows default recording device to '{targetDevice.Name}' for Crew Chief launch...");
+                            if (_audioEndpointService.SetDefaultInputDevice(targetDevice.Id))
+                            {
+                                didSwitchDevice = true;
+                            }
+                        }
+                    }
+                }
+                catch (Exception devEx)
+                {
+                    _eventLogService.LogWarning($"Pre-launch audio switch check failed: {devEx.Message}");
+                }
+            }
+
             var startInfo = new ProcessStartInfo
             {
                 FileName = launchPath,
@@ -212,6 +259,25 @@ public class CrewChiefMonitorService : ICrewChiefMonitorService, IDisposable
             Process.Start(startInfo);
             _eventLogService.LogInfo($"Launched Crew Chief from: {launchPath}");
             CheckCrewChiefProcess();
+
+            if (didSwitchDevice && originalDefaultDevice != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Give Crew Chief 3 seconds to initialize its Microsoft Speech Recognition engine and latch onto the default device
+                        await Task.Delay(3000);
+                        _audioEndpointService!.SetDefaultInputDevice(originalDefaultDevice.Id);
+                        _eventLogService.LogInfo($"Restored Windows default recording device back to '{originalDefaultDevice.Name}'.");
+                    }
+                    catch (Exception restoreEx)
+                    {
+                        _eventLogService.LogWarning($"Failed to restore Windows default recording device: {restoreEx.Message}");
+                    }
+                });
+            }
+
             return Task.FromResult(true);
         }
         catch (Exception ex)
