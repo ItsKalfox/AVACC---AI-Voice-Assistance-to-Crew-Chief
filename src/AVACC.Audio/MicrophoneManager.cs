@@ -1,3 +1,4 @@
+using AVACC.Core.Configuration;
 using AVACC.Core.Models;
 using NAudio.CoreAudioApi;
 
@@ -5,6 +6,99 @@ namespace AVACC.Audio;
 
 public class MicrophoneManager
 {
+    public bool ReconcileAudioDevices(AppSettings settings, out string statusMessage)
+    {
+        var messages = new List<string>();
+        bool changed = false;
+
+        try
+        {
+            var activeInputs = GetInputDevices();
+            var activeOutputs = GetPlaybackDevices();
+
+            // 1. Reconcile Microphone
+            if (!string.IsNullOrEmpty(settings.SelectedAudioDeviceId))
+            {
+                var inputMatch = activeInputs.FirstOrDefault(d => string.Equals(d.Id, settings.SelectedAudioDeviceId, StringComparison.OrdinalIgnoreCase))
+                              ?? activeInputs.FirstOrDefault(d => string.Equals(d.Name, settings.SelectedAudioDeviceName, StringComparison.OrdinalIgnoreCase));
+
+                if (inputMatch == null)
+                {
+                    var defaultInput = activeInputs.FirstOrDefault(d => d.IsDefault) ?? activeInputs.FirstOrDefault();
+                    if (defaultInput != null)
+                    {
+                        var oldName = settings.SelectedAudioDeviceName ?? settings.SelectedAudioDeviceId;
+                        settings.SelectedAudioDeviceId = defaultInput.Id;
+                        settings.SelectedAudioDeviceName = defaultInput.Name;
+                        changed = true;
+                        messages.Add($"Microphone '{oldName}' is unavailable; switched to default '{defaultInput.Name}'");
+                    }
+                }
+            }
+            else
+            {
+                var defaultInput = activeInputs.FirstOrDefault(d => d.IsDefault) ?? activeInputs.FirstOrDefault();
+                if (defaultInput != null)
+                {
+                    settings.SelectedAudioDeviceId = defaultInput.Id;
+                    settings.SelectedAudioDeviceName = defaultInput.Name;
+                    changed = true;
+                }
+            }
+
+            // 2. Reconcile PTT Sound Output Device
+            if (!string.IsNullOrEmpty(settings.PttSoundOutputDeviceId))
+            {
+                var pttOutMatch = activeOutputs.FirstOrDefault(d => string.Equals(d.Id, settings.PttSoundOutputDeviceId, StringComparison.OrdinalIgnoreCase))
+                               ?? activeOutputs.FirstOrDefault(d => string.Equals(d.Name, settings.PttSoundOutputDeviceName, StringComparison.OrdinalIgnoreCase));
+
+                if (pttOutMatch == null)
+                {
+                    var defaultOut = activeOutputs.FirstOrDefault(d => d.IsDefault)
+                                  ?? activeOutputs.FirstOrDefault(d => !d.Name.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+                                  ?? activeOutputs.FirstOrDefault();
+                    if (defaultOut != null)
+                    {
+                        var oldName = settings.PttSoundOutputDeviceName ?? settings.PttSoundOutputDeviceId;
+                        settings.PttSoundOutputDeviceId = defaultOut.Id;
+                        settings.PttSoundOutputDeviceName = defaultOut.Name;
+                        changed = true;
+                        messages.Add($"PTT sound output '{oldName}' is unavailable; switched to default '{defaultOut.Name}'");
+                    }
+                }
+            }
+
+            // 3. Reconcile Crew Chief Output Device
+            if (!string.IsNullOrEmpty(settings.CrewChiefAudioOutputDeviceId))
+            {
+                var ccOutMatch = activeOutputs.FirstOrDefault(d => string.Equals(d.Id, settings.CrewChiefAudioOutputDeviceId, StringComparison.OrdinalIgnoreCase))
+                              ?? activeOutputs.FirstOrDefault(d => string.Equals(d.Name, settings.CrewChiefAudioOutputDeviceName, StringComparison.OrdinalIgnoreCase));
+
+                if (ccOutMatch == null)
+                {
+                    var fallbackOut = activeOutputs.FirstOrDefault(d => d.Name.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+                                   ?? activeOutputs.FirstOrDefault(d => d.IsDefault)
+                                   ?? activeOutputs.FirstOrDefault();
+                    if (fallbackOut != null)
+                    {
+                        var oldName = settings.CrewChiefAudioOutputDeviceName ?? settings.CrewChiefAudioOutputDeviceId;
+                        settings.CrewChiefAudioOutputDeviceId = fallbackOut.Id;
+                        settings.CrewChiefAudioOutputDeviceName = fallbackOut.Name;
+                        changed = true;
+                        messages.Add($"Crew Chief bridge output '{oldName}' is unavailable; switched to '{fallbackOut.Name}'");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            messages.Add($"Device reconciliation error: {ex.Message}");
+        }
+
+        statusMessage = string.Join("; ", messages);
+        return changed;
+    }
+
     public IReadOnlyList<AudioDeviceInfo> GetInputDevices()
     {
         var devices = new List<AudioDeviceInfo>();

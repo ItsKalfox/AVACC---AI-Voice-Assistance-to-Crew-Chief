@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Automatic Audio Device Reconciliation & Disconnection Fallback:**
+  - Added `ReconcileAudioDevices` to [`MicrophoneManager`](file:///c:/Projects/AVACC---AI-Voice-Assistance-to-Crew-Chief/src/AVACC.Audio/MicrophoneManager.cs) that detects unplugged or disconnected headsets, microphones, and output devices on application startup.
+  - Automatically falls back to active system default devices and persists the new configuration to `settings.json`, preventing "mic error" failures when switching between headset and speakers/desktop mic.
+  - Bulletproofed [`AudioCaptureService.StartRecordingAsync`](file:///c:/Projects/AVACC---AI-Voice-Assistance-to-Crew-Chief/src/AVACC.Audio/AudioCaptureService.cs) to ensure only `DeviceState.Active` WASAPI endpoints are selected, with immediate fallback to the system default communication device if an endpoint is invalidated.
 - **Crew Chief Process Remote Controller & Execution:**
   - Added launch capability to [`CrewChiefMonitorService`](file:///c:/Projects/AVACC---AI-Voice-Assistance-to-Crew-Chief/src/AVACC.Infrastructure/CrewChiefMonitorService.cs), starting `CrewChiefV4.exe` alongside AVACC.
   - Added `Start Crew Chief` / `Stop Crew Chief` remote toggle button directly in the main top bar, emulating Win32 `BM_CLICK` on Crew Chief's native start button.

@@ -726,7 +726,14 @@ public class SettingsViewModel : ObservableObject
             AvailableAudioDevices.Add(dev);
         }
 
-        SelectedAudioDevice = AvailableAudioDevices.FirstOrDefault(d => d.IsDefault)
+        var s = _settingsService.CurrentSettings;
+        if (!string.IsNullOrEmpty(s.SelectedAudioDeviceId))
+        {
+            SelectedAudioDevice = AvailableAudioDevices.FirstOrDefault(d => d.Id == s.SelectedAudioDeviceId)
+                ?? AvailableAudioDevices.FirstOrDefault(d => d.Name == s.SelectedAudioDeviceName);
+        }
+
+        SelectedAudioDevice ??= AvailableAudioDevices.FirstOrDefault(d => d.IsDefault)
             ?? AvailableAudioDevices.FirstOrDefault();
     }
 

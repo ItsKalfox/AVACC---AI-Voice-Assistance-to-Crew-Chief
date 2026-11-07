@@ -10,6 +10,7 @@ namespace AVACC.Audio;
 public class AudioCaptureService : IAudioCaptureService, IDisposable
 {
     private readonly MicrophoneManager _microphoneManager;
+    private readonly ISettingsService? _settingsService;
     private readonly ILogger<AudioCaptureService>? _logger;
     private WasapiCapture? _capture;
     private MemoryStream? _recordingStream;
@@ -26,9 +27,13 @@ public class AudioCaptureService : IAudioCaptureService, IDisposable
     public event EventHandler<TimeSpan>? RecordingDurationChanged;
     public event EventHandler<string>? RecordingError;
 
-    public AudioCaptureService(MicrophoneManager microphoneManager, ILogger<AudioCaptureService>? logger = null)
+    public AudioCaptureService(
+        MicrophoneManager microphoneManager,
+        ISettingsService? settingsService = null,
+        ILogger<AudioCaptureService>? logger = null)
     {
         _microphoneManager = microphoneManager;
+        _settingsService = settingsService;
         _logger = logger;
     }
 
@@ -52,15 +57,16 @@ public class AudioCaptureService : IAudioCaptureService, IDisposable
 
             using (var enumerator = new MMDeviceEnumerator())
             {
+                var activeDevices = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
+
                 if (!string.IsNullOrEmpty(deviceId))
                 {
-                    try
+                    selectedDevice = activeDevices.FirstOrDefault(d => string.Equals(d.ID, deviceId, StringComparison.OrdinalIgnoreCase))
+                                  ?? activeDevices.FirstOrDefault(d => string.Equals(d.FriendlyName, deviceId, StringComparison.OrdinalIgnoreCase));
+
+                    if (selectedDevice == null)
                     {
-                        selectedDevice = enumerator.GetDevice(deviceId);
-                    }
-                    catch
-                    {
-                        _logger?.LogWarning("Specified device {DeviceId} not found, falling back to default", deviceId);
+                        _logger?.LogWarning("Specified device '{DeviceId}' is unavailable or not active, falling back to system default.", deviceId);
                     }
                 }
 
@@ -68,19 +74,37 @@ public class AudioCaptureService : IAudioCaptureService, IDisposable
                 {
                     try
                     {
-                        selectedDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia);
+                        selectedDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
                     }
                     catch
                     {
                         try
                         {
-                            selectedDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+                            selectedDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
                         }
                         catch
                         {
-                            selectedDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+                            selectedDevice = activeDevices.FirstOrDefault();
                         }
                     }
+
+                    // Auto-sync settings if fallback occurred so subsequent uses avoid mic errors
+                    if (selectedDevice != null && _settingsService != null)
+                    {
+                        var cur = _settingsService.CurrentSettings;
+                        if (cur.SelectedAudioDeviceId != selectedDevice.ID)
+                        {
+                            cur.SelectedAudioDeviceId = selectedDevice.ID;
+                            cur.SelectedAudioDeviceName = selectedDevice.FriendlyName;
+                            _ = _settingsService.SaveSettingsAsync(cur);
+                            _logger?.LogInformation("Automatically updated microphone to active default: {Name}", selectedDevice.FriendlyName);
+                        }
+                    }
+                }
+
+                if (selectedDevice == null)
+                {
+                    throw new InvalidOperationException("No active audio capture device (microphone) found.");
                 }
 
                 _capture = new WasapiCapture(selectedDevice);

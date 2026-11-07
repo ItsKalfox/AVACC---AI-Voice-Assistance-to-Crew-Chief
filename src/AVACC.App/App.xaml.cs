@@ -45,12 +45,22 @@ public partial class App : Application
         var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
         await settingsService.LoadSettingsAsync();
 
+        var settings = settingsService.CurrentSettings;
+
+        // Auto-reconcile audio devices: if configured device is disconnected/unplugged, auto-fallback to default and save
+        var micManager = _serviceProvider.GetRequiredService<MicrophoneManager>();
+        if (micManager.ReconcileAudioDevices(settings, out var changeMsg))
+        {
+            await settingsService.SaveSettingsAsync(settings);
+            var eventLogger = _serviceProvider.GetService<IEventLogService>();
+            eventLogger?.LogInfo($"Audio device auto-fallback: {changeMsg}");
+        }
+
         var registryService = _serviceProvider.GetRequiredService<ICommandRegistryService>();
         await registryService.LoadCommandsAsync();
 
         // Initialize PTT Service
         var pttService = _serviceProvider.GetRequiredService<IPushToTalkService>();
-        var settings = settingsService.CurrentSettings;
         pttService.Initialize(settings.PttKey, settings.IsGlobalPttEnabled, settings.DisablePttWhenInactive);
 
         settingsService.SettingsChanged += (s, newSettings) =>
