@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Top Bar Precision Window-Centering & Title Reorganization:**
+  - Decoupled the AI engine model info indicator box from column spacing, aligning it directly to the exact geometric horizontal center of the entire window regardless of flanking element widths.
+  - Relocated the application title (`AI VOICE ASSISTANCE TO CREW CHIEF`) from next to the logo in the top bar to the far left of the navigation console pod row (`Grid.Row="1"`).
+  - Relocated the Crew Chief status indicator text (`CrewChiefStatusDisplay`) to the far right of the navigation pod row, styling it in clean, plain muted gray text (`TextMutedBrush`) without colored chips or boxes.
 - **Top Bar & Navigation Carbon Fiber Scoping:**
   - Restricted the carbon fiber pattern background strictly to the top header bar (`Grid.Row="0"`), removing it from behind the navigation tab row to provide a solid dark contrast (`BgDarkBrush`) behind the console pod.
 - **Top Bar Header Right Streamlining:**

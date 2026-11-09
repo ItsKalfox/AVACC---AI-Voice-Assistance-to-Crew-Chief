@@ -77,57 +77,39 @@
 
                 <!-- Header Content -->
                 <Grid Margin="18,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                    <!-- App Branding: Logo Only (Far Left) -->
+                    <Image HorizontalAlignment="Left" VerticalAlignment="Center"
+                           Source="pack://application:,,,/Assets/AVACC-logo.png" Height="58" Stretch="Uniform" 
+                           RenderOptions.BitmapScalingMode="HighQuality" />
 
-                    <!-- App Branding with Bigger Logo -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Image Source="pack://application:,,,/Assets/AVACC-logo.png" Height="58" Stretch="Uniform" 
-                               RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,16,0" VerticalAlignment="Center" />
-                        <Border Height="30" Width="1" Background="#33FFFFFF" Margin="0,0,16,0" VerticalAlignment="Center" />
-                        <TextBlock Text="AI VOICE ASSISTANCE TO CREW CHIEF" FontSize="11" FontWeight="Bold" 
-                                   Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                    </StackPanel>
+                    <!-- Active Model & Mode Indicator (Exact Center of Window) -->
+                    <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Background="#E60A0B0E" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="12,6">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="AI ENGINE: " FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding ActiveProviderInfo}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </StackPanel>
+                    </Border>
 
-                    <!-- Active Model & Mode Indicator -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border Background="#E60A0B0E" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="12,6">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="AI ENGINE: " FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}" Margin="0,0,6,0" />
-                                <TextBlock Text="{Binding ActiveProviderInfo}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Header Right Status Elements -->
-                    <StackPanel Grid.Column="2" Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Header Right: Crew Chief Launch / Session Button (Far Right) -->
+                    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
                         <!-- Launch Crew Chief Button (Visible when offline) -->
                         <Button Command="{Binding LaunchCrewChiefCommand}" 
                                 Visibility="{Binding CanLaunchCrewChief, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 Content="LAUNCH CREW CHIEF" Padding="12,6" FontSize="10" FontWeight="Bold" 
-                                Style="{StaticResource ModernButtonStyle}" HorizontalAlignment="Right" />
+                                Style="{StaticResource ModernButtonStyle}" />
 
                         <!-- Start / Stop Crew Chief Session Button (Visible when process is running) -->
                         <Button Command="{Binding ToggleCrewChiefSessionCommand}" 
                                 Visibility="{Binding CanToggleCrewChiefSession, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 Content="{Binding SessionButtonText}" Padding="12,6" FontSize="10" FontWeight="Bold"
-                                Background="{Binding SessionButtonBackground}" Foreground="#FFFFFF" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Right">
+                                Background="{Binding SessionButtonBackground}" Foreground="#FFFFFF" BorderThickness="0" Cursor="Hand">
                             <Button.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="CornerRadius" Value="2" />
                                 </Style>
                             </Button.Resources>
                         </Button>
-
-                        <!-- Crew Chief Status Text (no box) -->
-                        <TextBlock Text="{Binding CrewChiefStatusDisplay}" 
-                                   FontSize="10" FontWeight="SemiBold" 
-                                   Foreground="{Binding CrewChiefStateColor}" 
-                                   HorizontalAlignment="Right" 
-                                   Margin="0,4,0,0" />
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -141,8 +123,15 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Top Dividing Baseline (Left Wing Extent) -->
-            <Border Grid.Column="0" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0" VerticalAlignment="Top" />
+            <!-- Far Left: Application Title & Top Dividing Baseline -->
+            <Grid Grid.Column="0" Height="36" VerticalAlignment="Top">
+                <Border BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0" VerticalAlignment="Top" />
+                <TextBlock Text="AI VOICE ASSISTANCE TO CREW CHIEF" 
+                           FontSize="11" FontWeight="Bold" 
+                           Foreground="{StaticResource TextSecondaryBrush}" 
+                           VerticalAlignment="Center" HorizontalAlignment="Left" 
+                           Margin="18,0,0,0" />
+            </Grid>
 
             <!-- Centered Console Pod -->
             <Grid Grid.Column="1" Height="36" VerticalAlignment="Top">
@@ -187,8 +176,15 @@
                 </Grid>
             </Grid>
 
-            <!-- Top Dividing Baseline (Right Wing Extent) -->
-            <Border Grid.Column="2" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0" VerticalAlignment="Top" />
+            <!-- Far Right: Crew Chief Status Text & Top Dividing Baseline -->
+            <Grid Grid.Column="2" Height="36" VerticalAlignment="Top">
+                <Border BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0" VerticalAlignment="Top" />
+                <TextBlock Text="{Binding CrewChiefStatusDisplay}" 
+                           FontSize="10" FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextMutedBrush}" 
+                           VerticalAlignment="Center" HorizontalAlignment="Right" 
+                           Margin="0,0,18,0" />
+            </Grid>
         </Grid>
 
         <!-- 3. ACTIVE TAB CONTENT -->
