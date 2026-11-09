@@ -32,11 +32,13 @@ public class MainViewModel : ObservableObject
     private bool _canToggleCrewChiefSession;
     private string _sessionButtonText = "START CREW CHIEF";
     private string _sessionButtonBackground = "#00E676";
-    private string _crewChiefBridgeStatusText = "Crew Chief Audio Bridge: Initializing...";
+    private string _crewChiefBridgeStatusText = "Crew Chief Audio Bridge: Inactive";
 
     public VisualCMDViewModel VisualCMD { get; }
     public CommandEditorViewModel CommandEditor { get; }
     public SettingsViewModel Settings { get; }
+
+    public string PttTriggerStatusText => $"PTT Trigger: {_pttService.ConfiguredKey}";
 
     public int SelectedTabIndex
     {
@@ -201,6 +203,7 @@ public class MainViewModel : ObservableObject
         {
             UpdateProviderInfo();
             UpdateCrewChiefDisplay(_crewChiefMonitor.State);
+            OnPropertyChanged(nameof(PttTriggerStatusText));
             if (VisualCMD.CurrentState == ProcessingState.Idle)
             {
                 VisualCMD.StateMessage = $"Press and hold {_pttService.ConfiguredKey} to speak.";
@@ -514,7 +517,7 @@ public class MainViewModel : ObservableObject
                     CrewChiefStateBackground = "#0D2518";
                     break;
                 case CrewChiefConnectionState.Running:
-                    CrewChiefStatusDisplay = "Crew Chief: Running (Idle)";
+                    CrewChiefStatusDisplay = "Crew Chief: Running";
                     CrewChiefStateColor = "#00E5FF";
                     CrewChiefStateBackground = "#0B2228";
                     break;
@@ -525,17 +528,9 @@ public class MainViewModel : ObservableObject
                     break;
             }
 
-            if (!s.EnableCrewChiefBridge)
-            {
-                CrewChiefBridgeStatusText = "Crew Chief Audio Bridge: Disabled";
-            }
-            else
-            {
-                var targetDevice = !string.IsNullOrEmpty(s.CrewChiefAudioOutputDeviceName)
-                    ? s.CrewChiefAudioOutputDeviceName
-                    : "Default Output";
-                CrewChiefBridgeStatusText = $"Crew Chief Audio Bridge: Active (Target: {targetDevice})";
-            }
+            CrewChiefBridgeStatusText = s.EnableCrewChiefBridge
+                ? "Crew Chief Audio Bridge: Active"
+                : "Crew Chief Audio Bridge: Inactive";
         });
     }
 }

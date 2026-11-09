@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Top Bar & Navigation Carbon Fiber Scoping:**
+  - Restricted the carbon fiber pattern background strictly to the top header bar (`Grid.Row="0"`), removing it from behind the navigation tab row to provide a solid dark contrast (`BgDarkBrush`) behind the console pod.
+- **Top Bar Header Right Streamlining:**
+  - Removed the boxed status chip gauges (process chip and PTT live state gauge) from the top bar header.
+  - Kept the primary Crew Chief action button (`LAUNCH CREW CHIEF` / `START CREW CHIEF` / `STOP CREW CHIEF`) and placed clean, borderless status text directly beneath it (`Crew Chief: Active`, `Crew Chief: Running`, `Crew Chief: Offline`).
+- **Minimalist Status Bar:**
+  - Streamlined the bottom status bar to display only essential system diagnostics in muted gray text: configured PTT trigger key (`PttTriggerStatusText`) and the Crew Chief audio bridge operational status (`Crew Chief Audio Bridge: Active` / `Inactive`).
+
 ### Added
 - **Centered Cockpit Console Navigation Pod:**
   - Redesigned the main three-tab navigation bar into a centered cockpit telemetry pod inspired by racing dashboards.
