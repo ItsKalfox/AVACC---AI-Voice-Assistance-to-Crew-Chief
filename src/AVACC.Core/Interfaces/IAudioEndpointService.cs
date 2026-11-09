@@ -9,3 +9,4 @@ public interface IAudioEndpointService
     AudioDeviceInfo? GetDefaultInputDevice();
     bool SetDefaultInputDevice(string deviceId);
 }
+

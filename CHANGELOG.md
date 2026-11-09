@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Centered Cockpit Console Navigation Pod:**
+  - Redesigned the main three-tab navigation bar into a centered cockpit telemetry pod inspired by racing dashboards.
+  - Features smooth S-curve / fillet vector wings (`Path` cubic Beziers) that drop down seamlessly from the top dividing baseline.
+  - Embedded solid dark charcoal console body (`#14161D`) over the carbon fiber background with dark slate border highlights.
+  - Implemented glowing neon red active tab indicator bar (`DropShadowEffect Color="#FF3333" BlurRadius="8"`) with crisp white active text and smooth silver-gray hover transitions.
+  - Maintained full responsive centering across all monitor aspect ratios and DPI display scales.
 - **Crew Chief Launch Audio Device Auto-Switching (`IAudioEndpointService`):**
   - Added COM-level default audio endpoint control using Windows `IPolicyConfig` to seamlessly switch Windows default recording endpoint before launching Crew Chief and automatically restore the original microphone after launch.
   - Added `AutoSwitchCrewChiefInputDeviceOnLaunch` setting (default: ON/enabled) in Settings.
