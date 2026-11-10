@@ -43,11 +43,20 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" Text="{Binding ApiKeyInput, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{StaticResource CodeBoxStyle}" Margin="0,0,6,0" />
-                            <Button Grid.Column="1" Content="Save Key" Command="{Binding SaveApiKeyCommand}" Style="{StaticResource AccentButtonStyle}" Margin="0,0,6,0" />
-                            <Button Grid.Column="2" Content="Remove" Command="{Binding RemoveApiKeyCommand}" Style="{StaticResource ModernButtonStyle}" 
+                            <Button Grid.Column="1" Command="{Binding ToggleApiKeyVisibilityCommand}" 
+                                    Style="{StaticResource ModernButtonStyle}" Padding="8,4" Margin="0,0,6,0"
+                                    ToolTip="Toggle API Key visibility">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding ApiKeyToggleIcon}" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding ApiKeyToggleText}" FontSize="11" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Content="Save Key" Command="{Binding SaveApiKeyCommand}" Style="{StaticResource AccentButtonStyle}" Margin="0,0,6,0" />
+                            <Button Grid.Column="3" Content="Remove" Command="{Binding RemoveApiKeyCommand}" Style="{StaticResource ModernButtonStyle}" 
                                     Foreground="{StaticResource AccentRedBrush}" />
                         </Grid>
 
@@ -143,7 +152,7 @@
                                   IsChecked="{Binding OptimizePromptPayload}" 
                                   Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,4" />
                         <TextBlock Text="Reduces token payload by ~90% by sending compact command descriptions instead of bulky examples. Prevents token limit errors (TPM / 413) on Groq and free-tier models." 
-                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="20,0,0,0" />
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="48,0,0,0" />
                     </StackPanel>
                 </Border>
 
@@ -168,22 +177,22 @@
 
                         <CheckBox Content="Automatically push recognized commands to Crew Chief" 
                                   IsChecked="{Binding AutoSendToCrewChief}" 
-                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="20,0,0,8" />
+                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="24,0,0,8" />
 
                         <CheckBox Content="Automatically launch Crew Chief alongside AVACC on startup" 
                                   IsChecked="{Binding AutoLaunchCrewChiefOnStartup}" 
                                   Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,4" />
                         <TextBlock Text="When AVACC starts, Crew Chief will automatically launch ready for your session." 
-                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="20,0,0,8" />
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="48,0,0,8" />
 
                         <!-- Auto-Switch Windows Default Recording Device at Launch -->
                         <CheckBox Content="Set Crew Chief input device at launch (auto-switch Windows default mic)" 
                                   IsChecked="{Binding AutoSwitchCrewChiefInputDeviceOnLaunch}" 
                                   Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,4" />
                         <TextBlock Text="Temporarily switches Windows default recording device to your selected input before launch so Crew Chief binds to it, then automatically restores your headset microphone." 
-                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="20,0,0,6" />
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="48,0,0,6" />
 
-                        <StackPanel Margin="20,0,0,10" IsEnabled="{Binding IsCrewChiefInputDeviceSelectorEnabled}">
+                        <StackPanel Margin="48,0,0,10" IsEnabled="{Binding IsCrewChiefInputDeviceSelectorEnabled}">
                             <TextBlock Text="Crew Chief Launch Input Device (e.g. CABLE Output):" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
                             <ComboBox ItemsSource="{Binding AvailableAudioDevices}" SelectedItem="{Binding SelectedCrewChiefInputDevice}" Height="28" />
                         </StackPanel>

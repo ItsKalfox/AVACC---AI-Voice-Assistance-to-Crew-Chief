@@ -30,8 +30,13 @@ public class MainViewModel : ObservableObject
     private bool _canLaunchCrewChief = true;
     private bool _isCrewChiefSessionActive;
     private bool _canToggleCrewChiefSession;
+    private bool _canStartCrewChiefSession;
+    private bool _canStopCrewChiefSession;
     private string _sessionButtonText = "START CREW CHIEF";
-    private string _sessionButtonBackground = "#00E676";
+    private string _sessionButtonBackground = "#E50914";
+    private string _sessionButtonBorderBrush = "#E50914";
+    private string _sessionButtonBorderThickness = "0";
+    private string _sessionButtonForeground = "#FFFFFF";
     private string _crewChiefBridgeStatusText = "Crew Chief Audio Bridge: Inactive";
 
     public VisualCMDViewModel VisualCMD { get; }
@@ -106,6 +111,18 @@ public class MainViewModel : ObservableObject
         set => SetProperty(ref _canToggleCrewChiefSession, value);
     }
 
+    public bool CanStartCrewChiefSession
+    {
+        get => _canStartCrewChiefSession;
+        set => SetProperty(ref _canStartCrewChiefSession, value);
+    }
+
+    public bool CanStopCrewChiefSession
+    {
+        get => _canStopCrewChiefSession;
+        set => SetProperty(ref _canStopCrewChiefSession, value);
+    }
+
     public string SessionButtonText
     {
         get => _sessionButtonText;
@@ -116,6 +133,24 @@ public class MainViewModel : ObservableObject
     {
         get => _sessionButtonBackground;
         set => SetProperty(ref _sessionButtonBackground, value);
+    }
+
+    public string SessionButtonBorderBrush
+    {
+        get => _sessionButtonBorderBrush;
+        set => SetProperty(ref _sessionButtonBorderBrush, value);
+    }
+
+    public string SessionButtonBorderThickness
+    {
+        get => _sessionButtonBorderThickness;
+        set => SetProperty(ref _sessionButtonBorderThickness, value);
+    }
+
+    public string SessionButtonForeground
+    {
+        get => _sessionButtonForeground;
+        set => SetProperty(ref _sessionButtonForeground, value);
     }
 
     public string CrewChiefBridgeStatusText
@@ -497,16 +532,24 @@ public class MainViewModel : ObservableObject
             CanLaunchCrewChief = !IsCrewChiefRunning;
             CanToggleCrewChiefSession = IsCrewChiefRunning;
             IsCrewChiefSessionActive = state == CrewChiefConnectionState.Active;
+            CanStartCrewChiefSession = IsCrewChiefRunning && !IsCrewChiefSessionActive;
+            CanStopCrewChiefSession = IsCrewChiefRunning && IsCrewChiefSessionActive;
 
             if (IsCrewChiefSessionActive)
             {
                 SessionButtonText = "STOP CREW CHIEF";
-                SessionButtonBackground = "#D50000"; // Racing red for stop
+                SessionButtonBackground = "Transparent";
+                SessionButtonBorderBrush = "#767D8E"; // Gray outline
+                SessionButtonBorderThickness = "1";
+                SessionButtonForeground = "#FFFFFF";
             }
             else
             {
                 SessionButtonText = "START CREW CHIEF";
-                SessionButtonBackground = "#00C853"; // Green for start
+                SessionButtonBackground = "#E50914"; // Solid motorsport red
+                SessionButtonBorderBrush = "#E50914";
+                SessionButtonBorderThickness = "0";
+                SessionButtonForeground = "#FFFFFF";
             }
 
             switch (state)

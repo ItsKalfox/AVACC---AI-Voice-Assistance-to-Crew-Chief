@@ -215,6 +215,17 @@ public class VisualCMDViewModel : ObservableObject
         set => SetProperty(ref _errorMessage, value);
     }
 
+    public bool IsAudioBridgeEnabled => _settingsService.CurrentSettings.EnableCrewChiefBridge;
+    public string AudioBridgeStatusTitle => IsAudioBridgeEnabled
+        ? "LIVE CREW CHIEF AUDIO BRIDGE ACTIVE"
+        : "AUDIO BRIDGE INACTIVE (PREVIEW MODE)";
+    public string AudioBridgeStatusDescription => IsAudioBridgeEnabled
+        ? "Recognized voice commands are automatically transcribed to TTS voice lines and fed into Crew Chief's listening device via virtual cable."
+        : "Offline audio loopback is disabled in Settings. Voice commands will generate suggestions only and will not be dispatched to Crew Chief.";
+    public string AudioBridgeStatusDotColor => IsAudioBridgeEnabled ? "#00E676" : "#767D8E";
+    public string AudioBridgeStatusBackground => IsAudioBridgeEnabled ? "#0F1F17" : "#14161D";
+    public string AudioBridgeStatusBorderBrush => IsAudioBridgeEnabled ? "#1B472C" : "#282A33";
+
     public ObservableCollection<LogEntry> EventLogs => _eventLogService.Entries;
     public ObservableCollection<ProcessingHistoryItem> HistoryItems { get; } = new();
 
@@ -261,6 +272,16 @@ public class VisualCMDViewModel : ObservableObject
 
         _eventLogService.LogInfo("AVACC Subsystem initialized. Ready for PTT capture.");
         _eventLogService.LogInfo("Crew Chief Integration Bridge ready (Offline Windows TTS loopback).");
+
+        _settingsService.SettingsChanged += (s, e) =>
+        {
+            OnPropertyChanged(nameof(IsAudioBridgeEnabled));
+            OnPropertyChanged(nameof(AudioBridgeStatusTitle));
+            OnPropertyChanged(nameof(AudioBridgeStatusDescription));
+            OnPropertyChanged(nameof(AudioBridgeStatusDotColor));
+            OnPropertyChanged(nameof(AudioBridgeStatusBackground));
+            OnPropertyChanged(nameof(AudioBridgeStatusBorderBrush));
+        };
     }
 
     public void SetSuggestedCommand(string? commandId, string? spokenPhrase = null)

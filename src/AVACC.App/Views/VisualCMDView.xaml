@@ -7,6 +7,70 @@
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type=viewmodels:VisualCMDViewModel}"
              d:DesignHeight="750" d:DesignWidth="1100">
+    <UserControl.Resources>
+        <!-- Segmented VU Meter Grille Overlay Brush (Cuts 2px gaps between 6px LEDs) -->
+        <DrawingBrush x:Key="VuSegmentOverlayBrush" 
+                      Viewport="0,0,8,12" ViewportUnits="Absolute" 
+                      TileMode="Tile">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="Transparent">
+                        <GeometryDrawing.Geometry>
+                            <RectangleGeometry Rect="0,0,6,12" />
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                    <GeometryDrawing Brush="#0A0B0E">
+                        <GeometryDrawing.Geometry>
+                            <RectangleGeometry Rect="6,0,2,12" />
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+
+        <!-- Telemetry Segmented LED VU Meter ProgressBar Style -->
+        <Style x:Key="SegmentedVuMeterStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="12" />
+            <Setter Property="Background" Value="#12141A" />
+            <Setter Property="BorderBrush" Value="#252A36" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Border Background="#0A0B0E" BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2">
+                            <Grid x:Name="TemplateRoot" SnapsToDevicePixels="True" Margin="1">
+                                <!-- Unlit Background Slots -->
+                                <Border Background="{TemplateBinding Background}" CornerRadius="1" />
+                                <Border Background="{StaticResource VuSegmentOverlayBrush}" IsHitTestVisible="False" />
+
+                                <!-- Active Multi-Color Lit Meter -->
+                                <Grid x:Name="PART_Track">
+                                    <Decorator x:Name="PART_Indicator" HorizontalAlignment="Left">
+                                        <Grid>
+                                            <Border CornerRadius="1">
+                                                <Border.Background>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                        <GradientStop Color="#00C853" Offset="0.0" />
+                                                        <GradientStop Color="#00E676" Offset="0.55" />
+                                                        <GradientStop Color="#FFB300" Offset="0.80" />
+                                                        <GradientStop Color="#FF1744" Offset="1.0" />
+                                                    </LinearGradientBrush>
+                                                </Border.Background>
+                                            </Border>
+                                            <!-- Slit Grille Overlay -->
+                                            <Border Background="{StaticResource VuSegmentOverlayBrush}" IsHitTestVisible="False" />
+                                        </Grid>
+                                    </Decorator>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Background="Transparent">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="380" />
@@ -50,13 +114,7 @@
                                 PreviewMouseUp="OnHoldToSpeakMouseUp"
                                 MouseLeave="OnHoldToSpeakMouseUp"
                                 Style="{StaticResource AccentButtonStyle}"
-                                Margin="0,0,0,8" Padding="10,8" />
-
-                        <!-- Non-integration disclaimer note -->
-                        <Border Background="#1A2B2F3A" CornerRadius="4" Padding="8,6" Margin="0,4,0,0">
-                            <TextBlock Text="ℹ Version 0.1 generates and previews suggestions only. Commands are not executed inside Crew Chief." 
-                                       FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-                        </Border>
+                                Margin="0" Padding="10,8" />
                     </StackPanel>
                 </Border>
 
@@ -83,12 +141,32 @@
                             <TextBlock Grid.Column="1" Text="{Binding SampleRateDisplay}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
                         </Grid>
 
-                        <!-- Real-time Level Meter Bar -->
-                        <TextBlock Text="Microphone Input Level:" FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,3" />
-                        <Border Height="8" Background="#0A0B0E" CornerRadius="3" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
-                            <ProgressBar Value="{Binding MicInputLevel, Mode=OneWay}" Minimum="0" Maximum="1" 
-                                         Foreground="{StaticResource AccentGreenBrush}" Background="Transparent" BorderThickness="0" />
-                        </Border>
+                        <!-- Real-time Telemetry Segmented LED VU Meter -->
+                        <Grid Margin="0,4,0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Microphone Input Level (Telemetry VU):" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Column="1" Text="{Binding MicInputLevel, StringFormat='{}{0:P0}'}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
+                        </Grid>
+
+                        <ProgressBar Value="{Binding MicInputLevel, Mode=OneWay}" Minimum="0" Maximum="1" 
+                                     Style="{StaticResource SegmentedVuMeterStyle}" />
+
+                        <!-- dB Calibration Scale -->
+                        <Grid Margin="1,3,1,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="-40 dB" FontSize="8.5" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Left" />
+                            <TextBlock Grid.Column="1" Text="-18 dB" FontSize="8.5" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="-6 dB" FontSize="8.5" Foreground="#FFB300" HorizontalAlignment="Right" Margin="0,0,12,0" />
+                            <TextBlock Grid.Column="3" Text="PEAK" FontSize="8.5" FontWeight="Bold" Foreground="#FF1744" HorizontalAlignment="Right" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -194,14 +272,7 @@
                             <TextBlock Grid.Column="1" Text="{Binding LlmConfidence, StringFormat='{}{0:P0} (Self-reported by LLM)', FallbackValue='N/A'}" FontSize="11" Foreground="{StaticResource AccentGreenBrush}" />
                         </Grid>
 
-                        <TextBlock Text="{Binding LlmReason, StringFormat='Reason: {0}'}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
-
-                        <!-- Raw Structured JSON Expander -->
-                        <Expander Header="View Structured JSON Response" IsExpanded="True" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
-                            <TextBox Text="{Binding RawJsonResponse, TargetNullValue='(No JSON response received yet. Trigger PTT or manual test to inspect.)', FallbackValue='(No JSON response received yet. Trigger PTT or manual test to inspect.)'}" 
-                                     IsReadOnly="True" Style="{StaticResource CodeBoxStyle}"
-                                     Height="110" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0" />
-                        </Expander>
+                        <TextBlock Text="{Binding LlmReason, StringFormat='Reason: {0}'}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0" />
                     </StackPanel>
                 </Border>
             </StackPanel>

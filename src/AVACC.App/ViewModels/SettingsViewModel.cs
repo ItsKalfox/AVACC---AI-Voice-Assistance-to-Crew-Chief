@@ -39,6 +39,7 @@ public class SettingsViewModel : ObservableObject
     private string _selectedProvider = "Google Gemini";
     private string _apiKeyInput = string.Empty;
     private bool _hasSavedKey;
+    private bool _isApiKeyRevealed;
     private bool _isTestingConnection;
     private string _connectionTestStatus = string.Empty;
     private bool? _connectionTestSuccess;
@@ -155,6 +156,15 @@ public class SettingsViewModel : ObservableObject
         get => _hasSavedKey;
         set => SetProperty(ref _hasSavedKey, value);
     }
+
+    public bool IsApiKeyRevealed
+    {
+        get => _isApiKeyRevealed;
+        set => SetProperty(ref _isApiKeyRevealed, value);
+    }
+
+    public string ApiKeyToggleText => IsApiKeyRevealed ? "Hide" : "Show";
+    public string ApiKeyToggleIcon => IsApiKeyRevealed ? "🙈" : "👁";
 
     public bool IsTestingConnection
     {
@@ -481,6 +491,7 @@ public class SettingsViewModel : ObservableObject
     // Commands
     public AsyncRelayCommand SaveApiKeyCommand { get; }
     public AsyncRelayCommand RemoveApiKeyCommand { get; }
+    public AsyncRelayCommand ToggleApiKeyVisibilityCommand { get; }
     public AsyncRelayCommand TestConnectionCommand { get; }
     public AsyncRelayCommand RefreshModelsCommand { get; }
     public AsyncRelayCommand RefreshAudioDevicesCommand { get; }
@@ -552,6 +563,7 @@ public class SettingsViewModel : ObservableObject
 
         SaveApiKeyCommand = new AsyncRelayCommand(SaveApiKeyAsync);
         RemoveApiKeyCommand = new AsyncRelayCommand(RemoveApiKeyAsync);
+        ToggleApiKeyVisibilityCommand = new AsyncRelayCommand(ToggleApiKeyVisibilityAsync);
         TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync);
         RefreshModelsCommand = new AsyncRelayCommand(RefreshModelsAsync);
         RefreshAudioDevicesCommand = new AsyncRelayCommand(RefreshAudioDevicesAsync);
@@ -623,6 +635,9 @@ public class SettingsViewModel : ObservableObject
     public async Task CheckExistingKeyAsync()
     {
         HasSavedKey = await _secureKeyStorage.HasApiKeyAsync(SelectedProvider);
+        IsApiKeyRevealed = false;
+        OnPropertyChanged(nameof(ApiKeyToggleText));
+        OnPropertyChanged(nameof(ApiKeyToggleIcon));
         if (HasSavedKey)
         {
             ApiKeyInput = "••••••••••••••••••••••••••••••••";
@@ -633,12 +648,43 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
+    private async Task ToggleApiKeyVisibilityAsync()
+    {
+        if (IsApiKeyRevealed)
+        {
+            IsApiKeyRevealed = false;
+            OnPropertyChanged(nameof(ApiKeyToggleText));
+            OnPropertyChanged(nameof(ApiKeyToggleIcon));
+            if (HasSavedKey)
+            {
+                ApiKeyInput = "••••••••••••••••••••••••••••••••";
+            }
+        }
+        else
+        {
+            IsApiKeyRevealed = true;
+            OnPropertyChanged(nameof(ApiKeyToggleText));
+            OnPropertyChanged(nameof(ApiKeyToggleIcon));
+            if (HasSavedKey)
+            {
+                var realKey = await _secureKeyStorage.GetApiKeyAsync(SelectedProvider);
+                if (!string.IsNullOrEmpty(realKey))
+                {
+                    ApiKeyInput = realKey;
+                }
+            }
+        }
+    }
+
     private async Task SaveApiKeyAsync()
     {
         if (string.IsNullOrWhiteSpace(ApiKeyInput) || ApiKeyInput.Contains("•••")) return;
 
         await _secureKeyStorage.SetApiKeyAsync(SelectedProvider, ApiKeyInput);
         HasSavedKey = true;
+        IsApiKeyRevealed = false;
+        OnPropertyChanged(nameof(ApiKeyToggleText));
+        OnPropertyChanged(nameof(ApiKeyToggleIcon));
         ApiKeyInput = "••••••••••••••••••••••••••••••••";
         _eventLogService.LogInfo($"API key saved securely for {SelectedProvider} (DPAPI encrypted).");
 
@@ -651,6 +697,9 @@ public class SettingsViewModel : ObservableObject
     {
         await _secureKeyStorage.RemoveApiKeyAsync(SelectedProvider);
         HasSavedKey = false;
+        IsApiKeyRevealed = false;
+        OnPropertyChanged(nameof(ApiKeyToggleText));
+        OnPropertyChanged(nameof(ApiKeyToggleIcon));
         ApiKeyInput = string.Empty;
         ConnectionTestStatus = "API key removed.";
         _eventLogService.LogInfo($"API key removed for {SelectedProvider}.");

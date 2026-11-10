@@ -7,20 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **Top Bar Precision Window-Centering & Title Reorganization:**
-  - Decoupled the AI engine model info indicator box from column spacing, aligning it directly to the exact geometric horizontal center of the entire window regardless of flanking element widths.
-  - Relocated the application title (`AI VOICE ASSISTANCE TO CREW CHIEF`) from next to the logo in the top bar to the far left of the navigation console pod row (`Grid.Row="1"`).
-  - Relocated the Crew Chief status indicator text (`CrewChiefStatusDisplay`) to the far right of the navigation pod row, styling it in clean, plain muted gray text (`TextMutedBrush`) without colored chips or boxes.
-- **Top Bar & Navigation Carbon Fiber Scoping:**
-  - Restricted the carbon fiber pattern background strictly to the top header bar (`Grid.Row="0"`), removing it from behind the navigation tab row to provide a solid dark contrast (`BgDarkBrush`) behind the console pod.
-- **Top Bar Header Right Streamlining:**
-  - Removed the boxed status chip gauges (process chip and PTT live state gauge) from the top bar header.
-  - Kept the primary Crew Chief action button (`LAUNCH CREW CHIEF` / `START CREW CHIEF` / `STOP CREW CHIEF`) and placed clean, borderless status text directly beneath it (`Crew Chief: Active`, `Crew Chief: Running`, `Crew Chief: Offline`).
-- **Minimalist Status Bar:**
-  - Streamlined the bottom status bar to display only essential system diagnostics in muted gray text: configured PTT trigger key (`PttTriggerStatusText`) and the Crew Chief audio bridge operational status (`Crew Chief Audio Bridge: Active` / `Inactive`).
+## [0.1.5] - 2026-11-10
 
 ### Added
+- **Animated Toggle Switches for Settings (`ToggleSwitchStyle`):**
+  - Modernized all setting checkboxes across `SettingsView.xaml` and `App.xaml` into motorsport-styled animated toggle switches with smooth slide transitions and reactive active states.
+- **Motorsport Segmented Telemetry LED VU Meter:**
+  - Replaced the flat progress bar in `VisualCMDView.xaml` with a motorsport segmented LED VU meter (`SegmentedVuMeterStyle`).
+  - Implemented tiled gap slits via `VuSegmentOverlayBrush` and a discrete multi-color gradient (Green $\rightarrow$ Amber $\rightarrow$ Red Peak).
+  - Added calibrated dB scale markings (`-40 dB`, `-18 dB`, `-6 dB`, `PEAK`) and live percentage readout for precise input monitoring.
+- **Secure API Key Masking & Show/Hide Eye Toggle:**
+  - Masked saved API keys by default in the Settings tab using bullet characters (`••••••••`).
+  - Added a toggle eye button (`👁 Show` / `🙈 Hide`) to securely retrieve and reveal the key in plaintext on demand via Windows DPAPI using `ISecureKeyStorage.GetApiKeyAsync()`.
 - **Centered Cockpit Console Navigation Pod:**
   - Redesigned the main three-tab navigation bar into a centered cockpit telemetry pod inspired by racing dashboards.
   - Features smooth S-curve / fillet vector wings (`Path` cubic Beziers) that drop down seamlessly from the top dividing baseline.
@@ -83,13 +81,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added a confirmation modal warning dialog before deleting commands from the registry to prevent accidental deletions.
 - **Voice Command History Clear Action:**
   - Added a "Clear History" button with confirmation prompt to the Recent Voice Command History card in Visual CMD.
-- **Structured JSON Response Viewer:**
-  - Raw AI response JSON is captured, formatted with indentation, and displayed in an expanded-by-default viewer in Visual CMD.
 - **Prompt Payload Optimization Toggle (Compact Lookup Table):**
   - Added `OptimizePromptPayload` setting and checkbox in the Settings tab under AI Configuration.
   - Generates a streamlined `- COMMAND_ID: Description` catalog that reduces prompt size from 15,000+ tokens to ~1,500 tokens (a ~90% reduction), eliminating Groq TPM rate limit errors (413).
 
 ### Changed
+- **Streamlined Visual CMD Dashboard:**
+  - Removed outdated Version 0.1 disclaimer and redundant audio bridge status card below the Hold-to-Speak button.
+  - Removed the raw structured JSON response expander and codebox, keeping the driver view focused and clutter-free during simulation sessions.
+- **Crew Chief Start/Stop Button Visual Synchronization:**
+  - Styled `START CREW CHIEF` with high-visibility accent red and `STOP CREW CHIEF` with matching secondary dark styling (`ModernButtonStyle`) identical to `LAUNCH CREW CHIEF`.
+- **Top Bar Precision Window-Centering & Title Reorganization:**
+  - Decoupled the AI engine model info indicator box from column spacing, aligning it directly to the exact geometric horizontal center of the entire window regardless of flanking element widths.
+  - Relocated the application title (`AI VOICE ASSISTANCE TO CREW CHIEF`) from next to the logo in the top bar to the far left of the navigation console pod row (`Grid.Row="1"`).
+  - Relocated the Crew Chief status indicator text (`CrewChiefStatusDisplay`) to the far right of the navigation pod row, styling it in clean, plain muted gray text (`TextMutedBrush`) without colored chips or boxes.
+- **Top Bar & Navigation Carbon Fiber Scoping:**
+  - Restricted the carbon fiber pattern background strictly to the top header bar (`Grid.Row="0"`), removing it from behind the navigation tab row to provide a solid dark contrast (`BgDarkBrush`) behind the console pod.
+- **Top Bar Header Right Streamlining:**
+  - Removed the boxed status chip gauges (process chip and PTT live state gauge) from the top bar header.
+  - Kept the primary Crew Chief action button (`LAUNCH CREW CHIEF` / `START CREW CHIEF` / `STOP CREW CHIEF`) and placed clean, borderless status text directly beneath it (`Crew Chief: Active`, `Crew Chief: Running`, `Crew Chief: Offline`).
+- **Minimalist Status Bar:**
+  - Streamlined the bottom status bar to display only essential system diagnostics in muted gray text: configured PTT trigger key (`PttTriggerStatusText`) and the Crew Chief audio bridge operational status (`Crew Chief Audio Bridge: Active` / `Inactive`).
 - **Auto-Scrolling Diagnostic Live Log:**
   - Connected collection change listener to automatically scroll the live diagnostic event log to the latest entry as messages arrive.
 

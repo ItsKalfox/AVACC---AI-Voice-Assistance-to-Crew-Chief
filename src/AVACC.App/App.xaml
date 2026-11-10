@@ -443,6 +443,110 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+            <!-- ========================================== -->
+            <!-- MODERN MOTORSPORT TOGGLE SWITCH (CHECKBOX) -->
+            <!-- ========================================== -->
+            <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="FontSize" Value="11.5" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="CheckBox">
+                            <Grid Background="Transparent" SnapsToDevicePixels="True">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Pill Track & Sliding Thumb -->
+                                <Grid Grid.Column="0" Width="38" Height="20" VerticalAlignment="Center">
+                                    <!-- Pill Track -->
+                                    <Border x:Name="track" Width="38" Height="20" CornerRadius="10"
+                                            Background="#181A22" BorderBrush="#353A48" BorderThickness="1.2" />
+
+                                    <!-- Circular Thumb with Soft Shadow -->
+                                    <Border x:Name="thumb" Width="14" Height="14" CornerRadius="7"
+                                            HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                            Background="#8E95A5">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#000000" BlurRadius="3" ShadowDepth="1" Direction="270" Opacity="0.4" />
+                                        </Border.Effect>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Label Content -->
+                                <ContentPresenter Grid.Column="1" Margin="10,0,0,0"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  HorizontalAlignment="Left"
+                                                  RecognizesAccessKey="True" />
+                            </Grid>
+
+                            <ControlTemplate.Triggers>
+                                <!-- Checked (ON) State -->
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ThicknessAnimation Storyboard.TargetName="thumb" 
+                                                                    Storyboard.TargetProperty="Margin" 
+                                                                    To="21,0,0,0" Duration="0:0:0.12">
+                                                    <ThicknessAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </ThicknessAnimation.EasingFunction>
+                                                </ThicknessAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ThicknessAnimation Storyboard.TargetName="thumb" 
+                                                                    Storyboard.TargetProperty="Margin" 
+                                                                    To="3,0,0,0" Duration="0:0:0.12">
+                                                    <ThicknessAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </ThicknessAnimation.EasingFunction>
+                                                </ThicknessAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                    <Setter TargetName="track" Property="Background" Value="{StaticResource AccentRedBrush}" />
+                                    <Setter TargetName="track" Property="BorderBrush" Value="#FF2B34" />
+                                    <Setter TargetName="thumb" Property="Background" Value="#FFFFFF" />
+                                    <Setter TargetName="thumb" Property="Margin" Value="21,0,0,0" />
+                                </Trigger>
+
+                                <!-- Mouse Over (Unchecked) -->
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="track" Property="BorderBrush" Value="#4F566A" />
+                                    <Setter TargetName="thumb" Property="Background" Value="#A5ACC0" />
+                                </Trigger>
+
+                                <!-- Mouse Over (Checked) -->
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsMouseOver" Value="True" />
+                                        <Condition Property="IsChecked" Value="True" />
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="track" Property="Background" Value="#F00A16" />
+                                    <Setter TargetName="track" Property="BorderBrush" Value="#FF4D55" />
+                                </MultiTrigger>
+
+                                <!-- Disabled State -->
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.4" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Implicit CheckBox Style across the app -->
+            <Style TargetType="CheckBox" BasedOn="{StaticResource ToggleSwitchStyle}" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
