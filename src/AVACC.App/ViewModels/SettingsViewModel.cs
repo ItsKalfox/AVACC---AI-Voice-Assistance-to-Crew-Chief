@@ -74,6 +74,7 @@ public class SettingsViewModel : ObservableObject
     private bool _enableDidntUnderstandSound = true;
     private string _selectedChiefVoicePersona = "Auto-Detect";
     private bool _enableAiErrorSound = true;
+    private bool _playErrorSoundWhenCrewChiefNotRunning = true;
     private AudioDeviceInfo? _selectedPttSoundDevice;
     private float _pttSoundVolume = 0.8f;
 
@@ -352,6 +353,12 @@ public class SettingsViewModel : ObservableObject
         set => SetProperty(ref _enableAiErrorSound, value);
     }
 
+    public bool PlayErrorSoundWhenCrewChiefNotRunning
+    {
+        get => _playErrorSoundWhenCrewChiefNotRunning;
+        set => SetProperty(ref _playErrorSoundWhenCrewChiefNotRunning, value);
+    }
+
     public bool HasUnsavedChanges
     {
         get => _hasUnsavedChanges;
@@ -505,6 +512,7 @@ public class SettingsViewModel : ObservableObject
     public RelayCommand TestPttEndSoundCommand { get; }
     public RelayCommand TestDidntUnderstandCommand { get; }
     public RelayCommand TestAiErrorCommand { get; }
+    public RelayCommand TestCrewChiefNotRunningErrorCommand { get; }
 
     public SettingsViewModel(
         ISettingsService settingsService,
@@ -552,6 +560,7 @@ public class SettingsViewModel : ObservableObject
         TestPttEndSoundCommand = new RelayCommand(() => _soundEffectService?.PlaySound("end_ptt.wav", PttSoundVolume, SelectedPttSoundDevice?.Id));
         TestDidntUnderstandCommand = new RelayCommand(() => _soundEffectService?.PlayDidntUnderstand());
         TestAiErrorCommand = new RelayCommand(() => _soundEffectService?.PlayAiError());
+        TestCrewChiefNotRunningErrorCommand = new RelayCommand(() => _soundEffectService?.PlayCrewChiefNotRunningError());
 
         // Initialize available Chief voice personas
         AvailableChiefPersonas.Clear();
@@ -603,6 +612,7 @@ public class SettingsViewModel : ObservableObject
             EnableDidntUnderstandSound = s.EnableDidntUnderstandSound;
             SelectedChiefVoicePersona = string.IsNullOrEmpty(s.SelectedChiefVoicePersona) ? "Auto-Detect" : s.SelectedChiefVoicePersona;
             EnableAiErrorSound = s.EnableAiErrorSound;
+            PlayErrorSoundWhenCrewChiefNotRunning = s.PlayErrorSoundWhenCrewChiefNotRunning;
             PttSoundVolume = s.PttSoundVolume;
 
             SampleRate = s.AudioSampleRate;
@@ -953,6 +963,7 @@ public class SettingsViewModel : ObservableObject
         s.EnableDidntUnderstandSound = EnableDidntUnderstandSound;
         s.SelectedChiefVoicePersona = SelectedChiefVoicePersona;
         s.EnableAiErrorSound = EnableAiErrorSound;
+        s.PlayErrorSoundWhenCrewChiefNotRunning = PlayErrorSoundWhenCrewChiefNotRunning;
         s.PttSoundVolume = PttSoundVolume;
         s.PttSoundOutputDeviceId = SelectedPttSoundDevice?.Id;
         s.PttSoundOutputDeviceName = SelectedPttSoundDevice?.Name;

@@ -36,6 +36,7 @@ public class AppSettings
     public bool EnableDidntUnderstandSound { get; set; } = true;
     public string SelectedChiefVoicePersona { get; set; } = "Auto-Detect";
     public bool EnableAiErrorSound { get; set; } = true;
+    public bool PlayErrorSoundWhenCrewChiefNotRunning { get; set; } = true;
     public string? PttSoundOutputDeviceId { get; set; }
     public string? PttSoundOutputDeviceName { get; set; }
     public float PttSoundVolume { get; set; } = 0.8f;

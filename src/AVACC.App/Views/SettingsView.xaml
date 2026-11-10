@@ -360,7 +360,7 @@
                                 </Grid>
 
                                 <!-- AI Model / Network Error Alert Cue -->
-                                <Grid Margin="0,0,0,2">
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -368,6 +368,17 @@
                                     <CheckBox Grid.Column="0" Content="Play alert sound on AI Model / Network failure" 
                                               IsChecked="{Binding EnableAiErrorSound}" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
                                     <Button Grid.Column="1" Content="Test Error Sound" Command="{Binding TestAiErrorCommand}" Style="{StaticResource ModernButtonStyle}" Padding="8,2" FontSize="10" ToolTip="Test error sound cue" />
+                                </Grid>
+
+                                <!-- Crew Chief Offline / Not Running Alert Cue -->
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox Grid.Column="0" Content="Play alert sound when using PTT if Crew Chief is not running" 
+                                              IsChecked="{Binding PlayErrorSoundWhenCrewChiefNotRunning}" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Content="Test Alert" Command="{Binding TestCrewChiefNotRunningErrorCommand}" Style="{StaticResource ModernButtonStyle}" Padding="8,2" FontSize="10" ToolTip="Test Crew Chief offline error sound cue" />
                                 </Grid>
                             </StackPanel>
                         </Border>

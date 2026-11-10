@@ -11,19 +11,42 @@ public class SoundEffectService : ISoundEffectService
 {
     private readonly ISettingsService _settingsService;
     private readonly IEventLogService _eventLogService;
+    private readonly ICrewChiefMonitorService? _crewChiefMonitor;
 
     public SoundEffectService(
         ISettingsService settingsService,
         IEventLogService eventLogService,
-        IPushToTalkService? pttService = null)
+        IPushToTalkService? pttService = null,
+        ICrewChiefMonitorService? crewChiefMonitor = null)
     {
         _settingsService = settingsService;
         _eventLogService = eventLogService;
+        _crewChiefMonitor = crewChiefMonitor;
 
         if (pttService != null)
         {
-            pttService.PttPressed += (s, e) => PlayPttStart();
-            pttService.PttReleased += (s, e) => PlayPttEnd();
+            pttService.PttPressed += (s, e) =>
+            {
+                var settings = _settingsService.CurrentSettings;
+                if (settings.PlayErrorSoundWhenCrewChiefNotRunning && _crewChiefMonitor != null && !_crewChiefMonitor.IsRunning)
+                {
+                    PlayCrewChiefNotRunningError();
+                    return;
+                }
+
+                PlayPttStart();
+            };
+
+            pttService.PttReleased += (s, e) =>
+            {
+                var settings = _settingsService.CurrentSettings;
+                if (settings.PlayErrorSoundWhenCrewChiefNotRunning && _crewChiefMonitor != null && !_crewChiefMonitor.IsRunning)
+                {
+                    return;
+                }
+
+                PlayPttEnd();
+            };
         }
     }
 
@@ -100,6 +123,14 @@ public class SoundEffectService : ISoundEffectService
     {
         var settings = _settingsService.CurrentSettings;
         if (!settings.EnableAiErrorSound) return;
+
+        PlaySoundInternal("error.mp3", settings.PttSoundVolume, settings.PttSoundOutputDeviceId);
+    }
+
+    public void PlayCrewChiefNotRunningError()
+    {
+        var settings = _settingsService.CurrentSettings;
+        if (!settings.PlayErrorSoundWhenCrewChiefNotRunning) return;
 
         PlaySoundInternal("error.mp3", settings.PttSoundVolume, settings.PttSoundOutputDeviceId);
     }

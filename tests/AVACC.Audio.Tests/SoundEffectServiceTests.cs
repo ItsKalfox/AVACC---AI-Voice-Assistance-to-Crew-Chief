@@ -54,6 +54,23 @@ public class SoundEffectServiceTests
         public void Dispose() { }
     }
 
+    private class FakeCrewChiefMonitorService : ICrewChiefMonitorService
+    {
+        public CrewChiefConnectionState State { get; set; } = CrewChiefConnectionState.NotRunning;
+        public bool IsRunning => State != CrewChiefConnectionState.NotRunning;
+        public bool IsSessionActive => State == CrewChiefConnectionState.Active;
+        public string StatusDisplay => "Crew Chief: Offline";
+        public string? ExecutablePath => null;
+        public event EventHandler<CrewChiefConnectionState>? StateChanged;
+
+        public void StartMonitoring() { }
+        public void StopMonitoring() { }
+        public Task<bool> LaunchCrewChiefAsync() => Task.FromResult(true);
+        public Task<bool> StartCrewChiefSessionAsync() => Task.FromResult(true);
+        public Task<bool> StopCrewChiefSessionAsync() => Task.FromResult(true);
+        public Task<bool> ToggleCrewChiefSessionAsync() => Task.FromResult(true);
+    }
+
     [Fact]
     public void SoundEffectService_Initializes_AndPreloadsSoundsWithoutCrashing()
     {
@@ -123,5 +140,61 @@ public class SoundEffectServiceTests
         var service = new SoundEffectService(settings, logs, ptt);
         service.PlayDidntUnderstand();
         service.PlayAiError();
+        service.PlayCrewChiefNotRunningError();
+    }
+
+    [Fact]
+    public void SoundEffectService_PttPressed_WhenCrewChiefNotRunning_PlaysErrorSoundAndSuppressesStartSound()
+    {
+        var settings = new FakeSettingsService();
+        settings.CurrentSettings.PlayErrorSoundWhenCrewChiefNotRunning = true;
+        settings.CurrentSettings.EnablePttStartSound = false;
+        settings.CurrentSettings.EnablePttEndSound = false;
+
+        var logs = new FakeEventLogService();
+        var ptt = new FakePushToTalkService();
+        var monitor = new FakeCrewChiefMonitorService { State = CrewChiefConnectionState.NotRunning };
+
+        var service = new SoundEffectService(settings, logs, ptt, monitor);
+
+        // When PTT is pressed and Crew Chief is offline, it should route to error sound without throwing
+        ptt.TriggerPttDown();
+        ptt.TriggerPttUp();
+    }
+
+    [Fact]
+    public void SoundEffectService_PttPressed_WhenCrewChiefRunning_RoutesToNormalPttCues()
+    {
+        var settings = new FakeSettingsService();
+        settings.CurrentSettings.PlayErrorSoundWhenCrewChiefNotRunning = true;
+        settings.CurrentSettings.EnablePttStartSound = false;
+        settings.CurrentSettings.EnablePttEndSound = false;
+
+        var logs = new FakeEventLogService();
+        var ptt = new FakePushToTalkService();
+        var monitor = new FakeCrewChiefMonitorService { State = CrewChiefConnectionState.Running };
+
+        var service = new SoundEffectService(settings, logs, ptt, monitor);
+
+        ptt.TriggerPttDown();
+        ptt.TriggerPttUp();
+    }
+
+    [Fact]
+    public void SoundEffectService_PttPressed_WhenCrewChiefNotRunning_ToggleDisabled_RoutesToNormalPttCues()
+    {
+        var settings = new FakeSettingsService();
+        settings.CurrentSettings.PlayErrorSoundWhenCrewChiefNotRunning = false;
+        settings.CurrentSettings.EnablePttStartSound = false;
+        settings.CurrentSettings.EnablePttEndSound = false;
+
+        var logs = new FakeEventLogService();
+        var ptt = new FakePushToTalkService();
+        var monitor = new FakeCrewChiefMonitorService { State = CrewChiefConnectionState.NotRunning };
+
+        var service = new SoundEffectService(settings, logs, ptt, monitor);
+
+        ptt.TriggerPttDown();
+        ptt.TriggerPttUp();
     }
 }

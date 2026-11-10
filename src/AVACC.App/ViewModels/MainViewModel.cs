@@ -251,6 +251,17 @@ public class MainViewModel : ObservableObject
         {
             if (_audioCaptureService.IsRecording || _isProcessingVoice) return;
 
+            var settings = _settingsService.CurrentSettings;
+            if (settings.PlayErrorSoundWhenCrewChiefNotRunning && !_crewChiefMonitor.IsRunning)
+            {
+                _eventLogService.LogWarning("PTT pressed, but Crew Chief is not running. Launch Crew Chief to use voice commands.");
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    VisualCMD.StateMessage = "Crew Chief is not running. Launch Crew Chief to use voice commands.";
+                });
+                return;
+            }
+
             Application.Current?.Dispatcher?.Invoke(() =>
             {
                 IsPttActive = true;
@@ -264,7 +275,6 @@ public class MainViewModel : ObservableObject
 
             try
             {
-                var settings = _settingsService.CurrentSettings;
                 await _audioCaptureService.StartRecordingAsync(
                     settings.SelectedAudioDeviceId,
                     settings.AudioSampleRate,

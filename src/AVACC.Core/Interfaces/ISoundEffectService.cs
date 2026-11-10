@@ -23,6 +23,11 @@ public interface ISoundEffectService
     void PlayAiError();
 
     /// <summary>
+    /// Plays the error sound cue if PTT is pressed while Crew Chief is not running.
+    /// </summary>
+    void PlayCrewChiefNotRunningError();
+
+    /// <summary>
     /// Plays a specific sound file with optional volume and device override.
     /// </summary>
     void PlaySound(string soundName, float? volumeOverride = null, string? deviceIdOverride = null);

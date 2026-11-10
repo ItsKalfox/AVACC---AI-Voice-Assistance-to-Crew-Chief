@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Crew Chief Offline PTT Audio Alert Cue:**
+  - Added real-time checking for Crew Chief execution state upon PTT activation.
+  - When Crew Chief is not launched or running (`!IsRunning`), pressing PTT immediately plays the error alert sound (`error.mp3`) instead of the standard PTT chirp, giving sim racers instant audio feedback without leaving the simulator or wondering why no response occurred.
+  - Automatically aborts wasteful speech capture and AI token consumption while Crew Chief is offline, displaying a clear prompt in Visual CMD.
+  - Added `PlayErrorSoundWhenCrewChiefNotRunning` toggle setting under Audio Cues in the Settings tab, complete with an instant "Test Alert" button.
+
 ## [0.1.5] - 2026-11-10
 
 ### Added
